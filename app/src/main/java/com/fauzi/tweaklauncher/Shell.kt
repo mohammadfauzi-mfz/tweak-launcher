@@ -19,6 +19,15 @@ object Shell {
         ShizukuState.OFF
     }
 
+    /** Menunggu binder Shizuku tersambung (dipakai saat proses dimulai dari alarm). */
+    fun awaitBinder(timeoutMs: Long = 4000) {
+        val end = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < end) {
+            if (state() != ShizukuState.OFF) return
+            Thread.sleep(250)
+        }
+    }
+
     /** Mengembalikan (kode keluar, keluaran). Kode -1 berarti gagal dijalankan. */
     fun run(cmd: String): Pair<Int, String> = try {
         // newProcess bersifat private di Shizuku 13.x, tapi masih bisa dipanggil lewat refleksi.

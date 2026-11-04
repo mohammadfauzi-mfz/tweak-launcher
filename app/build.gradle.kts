@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Nomor versi naik otomatis dari GitHub Actions (-PverCode=<run number>).
+val verCode = (project.findProperty("verCode") as String?)?.toIntOrNull() ?: 1
+
 android {
     namespace = "com.fauzi.tweaklauncher"
     compileSdk = 35
@@ -11,15 +14,24 @@ android {
         applicationId = "com.fauzi.tweaklauncher"
         minSdk = 30
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = verCode
+        versionName = "1.0.$verCode"
+    }
+
+    // Keystore tetap supaya APK versi baru bisa menimpa versi lama (update dari aplikasi).
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.keystore")
+            storePassword = "tweaklauncher"
+            keyAlias = "tweak"
+            keyPassword = "tweaklauncher"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Ditandatangani dengan kunci debug supaya APK langsung bisa dipasang.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -32,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -49,7 +62,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
 }

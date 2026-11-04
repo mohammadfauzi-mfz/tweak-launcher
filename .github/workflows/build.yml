@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,9 +24,23 @@ jobs:
           gradle-version: 8.9
 
       - name: Build release APK
-        run: gradle assembleRelease --no-daemon
+        run: gradle assembleRelease --no-daemon -PverCode=${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: TweakLauncher-apk
           path: app/build/outputs/apk/release/*.apk
+
+      # Rilis ini yang dibaca fitur "Periksa pembaruan" di dalam aplikasi.
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTES: ${{ github.event.head_commit.message }}
+          RUN_NO: ${{ github.run_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "TweakLauncher-1.0.${RUN_NO}.apk"
+          gh release create "v1.0.${RUN_NO}" "TweakLauncher-1.0.${RUN_NO}.apk" \
+            --repo "$REPO" \
+            --title "Tweak Launcher 1.0.${RUN_NO}" \
+            --notes "${NOTES:-Pembaruan otomatis}"

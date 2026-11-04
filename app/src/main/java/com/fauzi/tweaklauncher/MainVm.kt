@@ -1,82 +1,150 @@
 package com.fauzi.tweaklauncher
 
-import android.app.ActivityManager
 import android.app.Application
+import android.app.usage.UsageStatsManager
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.net.Uri
-import android.os.BatteryManager
-import android.os.Environment
-import android.os.StatFs
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
-import java.util.Locale
+import java.io.File
 
-enum class Screen { Home, Game, Drawer }
+enum class Screen { Home, Game, Drawer, Settings }
 
 data class AppItem(
     val label: String,
     val pkg: String,
     val icon: ImageBitmap,
-    val gameCat: Boolean
+    val gameCat: Boolean,
+    val system: Boolean
 )
 
-data class Stats(
-    val ramText: String = "-",
-    val ramPct: Float = 0f,
-    val battery: Int = 0,
-    val tempText: String = "-",
-    val tempPct: Float = 0f,
-    val storagePct: Float = 0f
-)
+sealed class HomeEntry {
+    data class A(val app: AppItem) : HomeEntry()
+    data class F(val name: String, val apps: List<AppItem>) : HomeEntry()
+}
+
+data class Revert(val label: String, val cmd: String)
 
 class MainVm(private val app: Application) : AndroidViewModel(app) {
 
-    private val prefs = Prefs(app)
+    val cfg = Cfg(app)
 
     var screen by mutableStateOf(Screen.Home)
-    var profileId by mutableStateOf(prefs.profile)
+    var settingsPage by mutableStateOf("")
     var shizuku by mutableStateOf(ShizukuState.OFF)
     var apps by mutableStateOf<List<AppItem>>(emptyList())
-    var games by mutableStateOf(prefs.games)
-    var boostOff by mutableStateOf(prefs.boostOff)
-    var pinned by mutableStateOf(prefs.pinned)
-    var lastGame by mutableStateOf(prefs.lastGame)
     var stats by mutableStateOf(Stats())
     var busy by mutableStateOf(false)
-    var menuApp by mutableStateOf<AppItem?>(null)
 
-    private var restoreTo: String? = null
+    // Dialog
+    var menuApp by mutableStateOf<AppItem?>(null)
+    var folderPickApp by mutableStateOf<AppItem?>(null)
+    var profilePickApp by mutableStateOf<AppItem?>(null)
+    var openFolder by mutableStateOf<String?>(null)
+    var showWidgetPicker by mutableStateOf(false)
+    var showUpdate by mutableStateOf(false)
+
+    // Pembaruan
+    var update by mutableStateOf<UpdateInfo?>(null)
+    var updateStatus by mutableStateOf("")
+    var checking by mutableStateOf(false)
+    var downloading by mutableStateOf(false)
+    var progress by mutableFloatStateOf(0f)
+    var downloaded by mutableStateOf<File?>(null)
+    private var dismissedTag = ""
+
+    // Layar (DPI dan resolusi)
+    var display by mutableStateOf(DisplayInfo())
+    var revert by mutableStateOf<Revert?>(null)
+    var revertLeft by mutableIntStateOf(0)
+    private var revertJob: Job? = null
+
+    // Alat
+    var unused by mutableStateOf<List<AppItem>>(emptyList())
+
+    var pendingWidget = -1
+    private var autoRestore = false
     private var loadedAt = 0L
 
-    val homeApps: List<AppItem>
+    // ---------------- Data turunan ----------------
+
+    val profiles: List<Profile> get() = ProfileStore.parse(cfg.profilesJson)
+
+    val baseProfile: Profile
+        get() = profiles.firstOrNull { it.id == cfg.baseProfile } ?: profiles.first()
+
+    val profile: Profile
+        get() = profiles.firstOrNull { it.id == cfg.applied } ?: baseProfile
+
+    val games: Set<String> get() = Sys.list(cfg.gamesCsv).toSet()
+    val boostOff: Set<String> get() = Sys.list(cfg.boostOffCsv).toSet()
+    val hidden: Set<String> get() = Sys.list(cfg.hiddenCsv).toSet()
+    val sleeping: Set<String> get() = Sys.list(cfg.sleepingCsv).toSet()
+    val dockPkgs: List<String> get() = Sys.list(cfg.dockCsv)
+    val widgetIds: List<Int> get() = cfg.widgetsCsv.split(",").mapNotNull { it.toIntOrNull() }
+
+    val visibleApps: List<AppItem>
         get() {
-            val byPkg = apps.associateBy { it.pkg }
-            val p = pinned.mapNotNull { byPkg[it] }
-            return if (p.isNotEmpty()) p else apps.filter { it.pkg !in games }.take(8)
+            val h = hidden
+            return if (cfg.showHidden) apps else apps.filter { it.pkg !in h }
         }
 
-    val gameApps: List<AppItem>
-        get() = apps.filter { it.pkg in games }
+    val gameApps: List<AppItem> get() = apps.filter { it.pkg in games }
+
+    val dockApps: List<AppItem>
+        get() {
+            val byPkg = apps.associateBy { it.pkg }
+            return dockPkgs.mapNotNull { byPkg[it] }
+        }
+
+    val homeEntries: List<HomeEntry>
+        get() {
+            val byPkg = apps.associateBy { it.pkg }
+            val fs = Store.folders(cfg.foldersJson)
+            val out = mutableListOf<HomeEntry>()
+            Sys.list(cfg.pinnedCsv).forEach { raw ->
+                if (raw.startsWith("folder:")) {
+                    val n = raw.removePrefix("folder:")
+                    val members = fs[n]
+                    if (members != null) out.add(HomeEntry.F(n, members.mapNotNull { byPkg[it] }))
+                } else {
+                    byPkg[raw.removePrefix("app:")]?.let { out.add(HomeEntry.A(it)) }
+                }
+            }
+            if (out.isEmpty()) {
+                val g = games
+                apps.filter { it.pkg !in g }.take(8).forEach { out.add(HomeEntry.A(it)) }
+            }
+            return out
+        }
 
     private fun toast(msg: String) {
         Toast.makeText(app, msg, Toast.LENGTH_LONG).show()
     }
 
-    // ---------- Shizuku ----------
+    private fun startSettings(i: Intent) {
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        app.startActivity(i)
+    }
+
+    // ---------------- Shizuku ----------------
 
     fun refreshShizuku() {
         shizuku = Shell.state()
@@ -91,26 +159,28 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     }
 
     fun openShizuku() {
-        val pm = app.packageManager
-        val i = pm.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+        val i = app.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
             ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        app.startActivity(i)
+        startSettings(i)
     }
 
-    // ---------- Siklus hidup ----------
+    // ---------------- Siklus hidup ----------------
 
     fun onResumed() {
         refreshShizuku()
-        val back = restoreTo
-        if (back != null) {
-            restoreTo = null
-            setProfile(back)
+        if (autoRestore) {
+            autoRestore = false
+            val base = baseProfile
+            if (base.id != cfg.applied) {
+                viewModelScope.launch { withContext(Dispatchers.IO) { Tweaks.apply(cfg, base) } }
+            }
         }
-        if (System.currentTimeMillis() - loadedAt > 60_000) loadApps()
+        if (System.currentTimeMillis() - loadedAt > 60_000L) loadApps()
+        syncService()
+        maybeAutoCheckUpdate()
     }
 
-    // ---------- Aplikasi ----------
+    // ---------------- Aplikasi ----------------
 
     fun loadApps() {
         loadedAt = System.currentTimeMillis()
@@ -122,128 +192,481 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
                     .filter { it.activityInfo.packageName != app.packageName }
                     .distinctBy { it.activityInfo.packageName }
                     .map { ri ->
+                        val ai = ri.activityInfo.applicationInfo
                         AppItem(
                             label = ri.loadLabel(pm).toString(),
                             pkg = ri.activityInfo.packageName,
-                            icon = ri.loadIcon(pm).toBitmap(108, 108).asImageBitmap(),
-                            gameCat = ri.activityInfo.applicationInfo.category == ApplicationInfo.CATEGORY_GAME
+                            icon = Sys.renderIcon(ri.loadIcon(pm)).asImageBitmap(),
+                            gameCat = ai.category == ApplicationInfo.CATEGORY_GAME,
+                            system = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                         )
                     }
                     .sortedBy { it.label.lowercase() }
             }
             apps = list
-            if (!prefs.gamesInit) {
-                games = games + list.filter { it.gameCat }.map { it.pkg }
-                prefs.games = games
-                prefs.gamesInit = true
+            if (!cfg.gamesInit) {
+                val merged = games + list.filter { it.gameCat }.map { it.pkg }
+                cfg.gamesCsv = Sys.join(merged)
+                cfg.gamesInit = true
             }
         }
     }
 
-    fun launch(pkg: String, boost: Boolean = false) {
+    fun launchApp(pkg: String) {
         viewModelScope.launch {
-            if (pkg in games) {
-                lastGame = pkg
-                prefs.lastGame = pkg
+            if (pkg in games) cfg.lastGame = pkg
+            if (pkg in sleeping) {
+                withContext(Dispatchers.IO) { Tweaks.wake(pkg) }
+                cfg.sleepingCsv = Sys.join(sleeping - pkg)
             }
-            if (boost && profileId != "game") {
-                val r = withContext(Dispatchers.IO) { Tweaks.apply(PROFILES.first { it.id == "game" }) }
-                if (r.ok) {
-                    restoreTo = profileId
-                    profileId = "game"
-                    prefs.profile = "game"
-                } else {
-                    toast(r.message)
+            val target = cfg.ruleFor(pkg)
+            if (target != null && target != cfg.applied) {
+                val p = profiles.firstOrNull { it.id == target }
+                if (p != null) {
+                    val r = withContext(Dispatchers.IO) { Tweaks.apply(cfg, p) }
+                    if (r.ok) autoRestore = true else toast(r.message)
                 }
             }
             val i = app.packageManager.getLaunchIntentForPackage(pkg)
-            if (i != null) {
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                app.startActivity(i)
-            }
+            if (i != null) startSettings(i)
         }
     }
 
     fun toggleGame(pkg: String) {
-        games = if (pkg in games) games - pkg else games + pkg
-        prefs.games = games
+        cfg.gamesCsv = Sys.join(if (pkg in games) games - pkg else games + pkg)
     }
 
     fun toggleBoost(pkg: String) {
-        boostOff = if (pkg in boostOff) boostOff - pkg else boostOff + pkg
-        prefs.boostOff = boostOff
+        cfg.boostOffCsv = Sys.join(if (pkg in boostOff) boostOff - pkg else boostOff + pkg)
+    }
+
+    fun toggleHidden(pkg: String) {
+        cfg.hiddenCsv = Sys.join(if (pkg in hidden) hidden - pkg else hidden + pkg)
+    }
+
+    fun isPinned(pkg: String): Boolean {
+        val l = Sys.list(cfg.pinnedCsv)
+        return "app:$pkg" in l || pkg in l
     }
 
     fun togglePin(pkg: String) {
-        pinned = if (pkg in pinned) pinned - pkg else pinned + pkg
-        prefs.pinned = pinned
+        val l = Sys.list(cfg.pinnedCsv).filter { it != "app:$pkg" && it != pkg }
+        cfg.pinnedCsv = if (isPinned(pkg)) Sys.join(l) else Sys.join(l + "app:$pkg")
+    }
+
+    fun toggleDock(pkg: String) {
+        val l = dockPkgs
+        if (pkg in l) {
+            cfg.dockCsv = Sys.join(l - pkg)
+        } else if (l.size >= 5) {
+            toast("Dock penuh, maksimal 5 aplikasi.")
+        } else {
+            cfg.dockCsv = Sys.join(l + pkg)
+        }
     }
 
     fun openInfo(pkg: String) {
-        val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg"))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        app.startActivity(i)
+        startSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")))
     }
 
-    fun optimize(pkg: String) {
+    fun uninstall(pkg: String) {
+        startSettings(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")))
+    }
+
+    fun optimize(pkg: String) = runTool("Mengoptimalkan, mohon tunggu") { Tweaks.optimize(pkg) }
+
+    fun forceStop(pkg: String) = runTool(null) { Tweaks.forceStop(pkg) }
+
+    fun runTool(startMsg: String?, block: () -> TweakResult) {
         viewModelScope.launch {
-            toast("Mengoptimalkan, mohon tunggu...")
-            val r = withContext(Dispatchers.IO) { Tweaks.optimize(pkg) }
+            if (startMsg != null) toast("$startMsg...")
+            val r = withContext(Dispatchers.IO) { block() }
             toast(r.message)
         }
     }
 
-    fun forceStop(pkg: String) {
+    // ---------------- Tidurkan aplikasi ----------------
+
+    fun sleepApp(pkg: String) {
         viewModelScope.launch {
-            val r = withContext(Dispatchers.IO) { Tweaks.forceStop(pkg) }
+            val r = withContext(Dispatchers.IO) { Tweaks.sleep(pkg) }
+            if (r.ok) cfg.sleepingCsv = Sys.join(sleeping + pkg)
             toast(r.message)
         }
     }
 
-    // ---------- Profil ----------
+    fun wakeApp(pkg: String) {
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) { Tweaks.wake(pkg) }
+            if (r.ok) cfg.sleepingCsv = Sys.join(sleeping - pkg)
+            toast(r.message)
+        }
+    }
+
+    fun sleepAll(list: List<AppItem>) {
+        viewModelScope.launch {
+            val done = withContext(Dispatchers.IO) { list.filter { Tweaks.sleep(it.pkg).ok } }
+            cfg.sleepingCsv = Sys.join(sleeping + done.map { it.pkg })
+            unused = emptyList()
+            toast("${done.size} dari ${list.size} aplikasi ditidurkan")
+        }
+    }
+
+    fun wakeAll() {
+        viewModelScope.launch {
+            val l = sleeping.toList()
+            withContext(Dispatchers.IO) { l.forEach { Tweaks.wake(it) } }
+            cfg.sleepingCsv = ""
+            toast("${l.size} aplikasi dibangunkan")
+        }
+    }
+
+    fun loadUnused(days: Int = 14) {
+        if (!Sys.hasUsageAccess(app)) {
+            toast("Beri izin Akses penggunaan dulu.")
+            startSettings(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            return
+        }
+        viewModelScope.launch {
+            val sl = sleeping
+            val list = withContext(Dispatchers.Default) {
+                val usm = app.getSystemService(UsageStatsManager::class.java)
+                val now = System.currentTimeMillis()
+                val st = usm.queryUsageStats(UsageStatsManager.INTERVAL_BEST, now - 60L * 86_400_000L, now)
+                val last = HashMap<String, Long>()
+                st.forEach { s -> last[s.packageName] = maxOf(last[s.packageName] ?: 0L, s.lastTimeUsed) }
+                val cutoff = now - days * 86_400_000L
+                apps.filter { a ->
+                    !a.system && a.pkg !in sl && a.pkg != "moe.shizuku.privileged.api" &&
+                        (last[a.pkg] ?: 0L) < cutoff
+                }
+            }
+            unused = list
+            if (list.isEmpty()) toast("Tidak ada aplikasi yang jarang dipakai")
+        }
+    }
+
+    // ---------------- Folder ----------------
+
+    val folders: Map<String, List<String>> get() = Store.folders(cfg.foldersJson)
+
+    private fun saveFolders(m: Map<String, List<String>>) {
+        cfg.foldersJson = Store.foldersJson(m)
+    }
+
+    fun createFolder(name: String): Boolean {
+        val n = name.trim()
+        if (n.isEmpty() || n.contains(":")) return false
+        val m = LinkedHashMap(folders)
+        if (m.containsKey(n)) return false
+        m[n] = emptyList()
+        saveFolders(m)
+        cfg.pinnedCsv = Sys.join(Sys.list(cfg.pinnedCsv) + "folder:$n")
+        return true
+    }
+
+    fun addToFolder(folder: String, pkg: String) {
+        val m = LinkedHashMap(folders)
+        val cur = m[folder] ?: return
+        if (pkg !in cur) m[folder] = cur + pkg
+        saveFolders(m)
+        // Aplikasi yang sudah di folder tidak perlu muncul lagi di grid Beranda.
+        cfg.pinnedCsv = Sys.join(Sys.list(cfg.pinnedCsv).filter { it != "app:$pkg" && it != pkg })
+    }
+
+    fun removeFromFolder(folder: String, pkg: String) {
+        val m = LinkedHashMap(folders)
+        val cur = m[folder] ?: return
+        m[folder] = cur - pkg
+        saveFolders(m)
+    }
+
+    fun deleteFolder(name: String) {
+        val m = LinkedHashMap(folders)
+        m.remove(name)
+        saveFolders(m)
+        cfg.pinnedCsv = Sys.join(Sys.list(cfg.pinnedCsv).filter { it != "folder:$name" })
+        openFolder = null
+    }
+
+    // ---------------- Profil performa ----------------
 
     fun setProfile(id: String) {
         viewModelScope.launch {
-            val p = PROFILES.first { it.id == id }
+            val p = profiles.firstOrNull { it.id == id } ?: return@launch
             busy = true
-            val r = withContext(Dispatchers.IO) { Tweaks.apply(p) }
+            val r = withContext(Dispatchers.IO) { Tweaks.apply(cfg, p) }
             busy = false
-            if (r.ok) {
-                profileId = id
-                prefs.profile = id
-            }
+            if (r.ok) cfg.baseProfile = id
             toast(r.message)
         }
     }
 
-    // ---------- Statistik ----------
+    fun cycleProfile() {
+        val l = profiles
+        val i = l.indexOfFirst { it.id == cfg.baseProfile }
+        setProfile(l[(i + 1).mod(l.size)].id)
+    }
+
+    fun saveProfiles(l: List<Profile>) {
+        cfg.profilesJson = ProfileStore.toJson(l)
+    }
+
+    fun setAppProfile(pkg: String, profileId: String?) {
+        val m = Store.map(cfg.appProfilesJson)
+        if (profileId == null) m.remove(pkg) else m[pkg] = profileId
+        cfg.appProfilesJson = Store.mapJson(m)
+    }
+
+    // ---------------- Layanan latar ----------------
+
+    fun syncService() {
+        if (cfg.overlayOn || cfg.autoApp || cfg.autoSched) {
+            try {
+                ContextCompat.startForegroundService(app, Intent(app, TweakService::class.java))
+            } catch (e: Exception) {
+                toast("Gagal memulai layanan: ${e.message}")
+            }
+        } else {
+            app.stopService(Intent(app, TweakService::class.java))
+        }
+    }
+
+    fun setOverlay(on: Boolean) {
+        if (on && !Settings.canDrawOverlays(app)) {
+            toast("Izinkan 'Tampil di atas aplikasi lain', lalu aktifkan lagi.")
+            startSettings(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${app.packageName}")))
+            return
+        }
+        cfg.overlayOn = on
+        syncService()
+    }
+
+    fun setAutoApp(on: Boolean) {
+        if (on && !Sys.hasUsageAccess(app)) {
+            toast("Izinkan 'Akses penggunaan' untuk Tweak Launcher, lalu aktifkan lagi.")
+            startSettings(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            return
+        }
+        cfg.autoApp = on
+        syncService()
+    }
+
+    fun setAutoSched(on: Boolean) {
+        cfg.autoSched = on
+        syncService()
+    }
+
+    // ---------------- Gestur ----------------
+
+    fun runGesture(action: String) {
+        when (action) {
+            "drawer" -> screen = Screen.Drawer
+            "game" -> screen = Screen.Game
+            "settings" -> {
+                settingsPage = ""
+                screen = Screen.Settings
+            }
+            "cycle" -> cycleProfile()
+            "notif" -> runTool(null) { Tweaks.expandNotif() }
+            "lock" -> runTool(null) { Tweaks.lockScreen() }
+        }
+    }
+
+    // ---------------- Statistik ----------------
 
     fun refreshStats() {
-        val loc = Locale("id", "ID")
-        val am = app.getSystemService(ActivityManager::class.java)
-        val mi = ActivityManager.MemoryInfo()
-        am.getMemoryInfo(mi)
-        val gb = 1024.0 * 1024.0 * 1024.0
-        val used = mi.totalMem - mi.availMem
-        val ramPct = if (mi.totalMem > 0) used.toFloat() / mi.totalMem.toFloat() else 0f
+        cfg.syncApplied()
+        stats = Sys.stats(app)
+    }
 
-        val b = app.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val level = b?.getIntExtra(BatteryManager.EXTRA_LEVEL, 0) ?: 0
-        val scale = b?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
-        val battery = if (scale > 0) level * 100 / scale else 0
-        val temp = (b?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
+    // ---------------- Widget ----------------
 
-        val st = StatFs(Environment.getDataDirectory().path)
-        val total = st.totalBytes.toFloat()
-        val storagePct = if (total > 0) 1f - st.availableBytes.toFloat() / total else 0f
+    fun addWidget(id: Int) {
+        val l = widgetIds
+        if (id !in l) cfg.widgetsCsv = (l + id).joinToString(",")
+    }
 
-        stats = Stats(
-            ramText = String.format(loc, "%.1f GB", used / gb),
-            ramPct = ramPct,
-            battery = battery,
-            tempText = String.format(loc, "%.0f°C", temp),
-            tempPct = temp / 50f,
-            storagePct = storagePct
+    fun removeWidget(id: Int) {
+        cfg.widgetsCsv = widgetIds.filter { it != id }.joinToString(",")
+        try {
+            WidgetHost.host.deleteAppWidgetId(id)
+        } catch (e: Exception) {
+        }
+    }
+
+    fun dropWidgetId(id: Int) {
+        try {
+            WidgetHost.host.deleteAppWidgetId(id)
+        } catch (e: Exception) {
+        }
+    }
+
+    // ---------------- Pembaruan ----------------
+
+    fun maybeAutoCheckUpdate() {
+        if (!cfg.autoUpdate || checking) return
+        val last = cfg.lastUpdateCheck.toLongOrNull() ?: 0L
+        if (System.currentTimeMillis() - last > 12L * 3_600_000L) checkUpdate(false)
+    }
+
+    fun checkUpdate(manual: Boolean) {
+        if (checking) return
+        viewModelScope.launch {
+            checking = true
+            if (manual) updateStatus = "Memeriksa..."
+            try {
+                val info = withContext(Dispatchers.IO) { Updater.check() }
+                cfg.lastUpdateCheck = System.currentTimeMillis().toString()
+                if (info.code > BuildConfig.VERSION_CODE) {
+                    update = info
+                    updateStatus = "Versi baru tersedia: ${info.tag}"
+                    if (manual || info.tag != dismissedTag) showUpdate = true
+                } else {
+                    update = null
+                    updateStatus = "Kamu sudah memakai versi terbaru (${BuildConfig.VERSION_NAME})"
+                }
+            } catch (e: Exception) {
+                if (manual) updateStatus = "Gagal memeriksa: ${e.message}"
+            } finally {
+                checking = false
+            }
+        }
+    }
+
+    fun dismissUpdate() {
+        dismissedTag = update?.tag ?: ""
+        showUpdate = false
+    }
+
+    fun downloadUpdate() {
+        val u = update ?: return
+        if (downloading) return
+        viewModelScope.launch {
+            downloading = true
+            progress = 0f
+            try {
+                val f = withContext(Dispatchers.IO) { Updater.download(app, u.url) { progress = it } }
+                downloaded = f
+                installUpdate()
+            } catch (e: Exception) {
+                toast("Gagal mengunduh: ${e.message}")
+            } finally {
+                downloading = false
+            }
+        }
+    }
+
+    fun installUpdate() {
+        val f = downloaded ?: return
+        if (!Updater.install(app, f)) {
+            toast("Izinkan Tweak Launcher memasang aplikasi, lalu tekan Pasang lagi.")
+        }
+    }
+
+    // ---------------- Layar: DPI dan resolusi ----------------
+
+    fun refreshDisplay() {
+        viewModelScope.launch { display = withContext(Dispatchers.IO) { Tweaks.readDisplay() } }
+    }
+
+    private fun applyDisplay(applyCmd: String, revertCmd: String, label: String) {
+        viewModelScope.launch {
+            val (code, out) = withContext(Dispatchers.IO) {
+                if (Shell.state() == ShizukuState.READY) Shell.run(applyCmd) else Pair(-1, "Shizuku belum siap")
+            }
+            if (code != 0) {
+                toast("Gagal: $out")
+                return@launch
+            }
+            display = withContext(Dispatchers.IO) { Tweaks.readDisplay() }
+            revert = Revert(label, revertCmd)
+            revertLeft = 15
+            revertJob?.cancel()
+            revertJob = launch {
+                while (revertLeft > 0) {
+                    delay(1000)
+                    revertLeft -= 1
+                }
+                revertNow()
+            }
+        }
+    }
+
+    private suspend fun revertNow() {
+        val r = revert ?: return
+        revert = null
+        withContext(Dispatchers.IO) { Shell.run(r.cmd) }
+        display = withContext(Dispatchers.IO) { Tweaks.readDisplay() }
+    }
+
+    fun keepDisplay() {
+        revertJob?.cancel()
+        revert = null
+    }
+
+    fun revertDisplay() {
+        revertJob?.cancel()
+        viewModelScope.launch { revertNow() }
+    }
+
+    fun setDensity(value: Int) {
+        val old = display.overDpi
+        applyDisplay(
+            "wm density $value",
+            if (old > 0) "wm density $old" else "wm density reset",
+            "DPI $value"
         )
+    }
+
+    fun resetDensity() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { Shell.run("wm density reset") }
+            display = withContext(Dispatchers.IO) { Tweaks.readDisplay() }
+        }
+    }
+
+    fun setScale(percent: Int) {
+        val parts = display.physSize.split("x")
+        val w = parts.getOrNull(0)?.toIntOrNull() ?: return
+        val h = parts.getOrNull(1)?.toIntOrNull() ?: return
+        val nw = (w * percent / 100) / 2 * 2
+        val nh = (h * percent / 100) / 2 * 2
+        val old = display.overSize
+        applyDisplay(
+            "wm size ${nw}x$nh",
+            if (old.isNotEmpty()) "wm size $old" else "wm size reset",
+            "Resolusi ${nw}x$nh"
+        )
+    }
+
+    fun resetSize() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { Shell.run("wm size reset") }
+            display = withContext(Dispatchers.IO) { Tweaks.readDisplay() }
+        }
+    }
+
+    // ---------------- Cadangan ----------------
+
+    fun exportTo(uri: Uri) {
+        try {
+            app.contentResolver.openOutputStream(uri)?.use { it.write(Backup.export(cfg.sp).toByteArray()) }
+            toast("Pengaturan diekspor")
+        } catch (e: Exception) {
+            toast("Gagal ekspor: ${e.message}")
+        }
+    }
+
+    fun importFrom(uri: Uri) {
+        try {
+            val text = app.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: ""
+            val n = Backup.import(cfg.sp, text)
+            cfg.reload()
+            syncService()
+            toast("$n pengaturan dipulihkan")
+        } catch (e: Exception) {
+            toast("Berkas tidak valid: ${e.message}")
+        }
     }
 }
