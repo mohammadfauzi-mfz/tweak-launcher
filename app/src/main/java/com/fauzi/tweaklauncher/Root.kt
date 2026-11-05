@@ -2,6 +2,14 @@ package com.fauzi.tweaklauncher
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -72,11 +80,23 @@ fun Root(vm: MainVm) {
                         }
                     }
             ) {
-                when (vm.screen) {
-                    Screen.Home -> HomeScreen(vm)
-                    Screen.Care -> CareScreen(vm)
-                    Screen.Drawer -> DrawerScreen(vm)
-                    Screen.Settings -> SettingsScreen(vm)
+                AnimatedContent(
+                    targetState = vm.screen,
+                    transitionSpec = {
+                        val fwd = targetState.ordinal > initialState.ordinal
+                        (slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { w -> if (fwd) w / 3 else -w / 3 } +
+                            fadeIn(tween(320))) togetherWith
+                            (slideOutHorizontally(tween(320, easing = FastOutSlowInEasing)) { w -> if (fwd) -w / 3 else w / 3 } +
+                                fadeOut(tween(180)))
+                    },
+                    label = "tab"
+                ) { s ->
+                    when (s) {
+                        Screen.Home -> HomeScreen(vm)
+                        Screen.Care -> CareScreen(vm)
+                        Screen.Drawer -> DrawerScreen(vm)
+                        Screen.Settings -> SettingsScreen(vm)
+                    }
                 }
             }
             NavBar(vm)
