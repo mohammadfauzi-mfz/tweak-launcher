@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -308,10 +310,35 @@ private fun PdaToday(vm: MainVm) {
     val needPerm = vm.shizuku == ShizukuState.NEED_PERM
     val current = vm.profile
 
+    val cfg = vm.cfg
+    val scroll = rememberScrollState()
+    val canUp = remember { booleanArrayOf(false) }
+    val canDown = remember { booleanArrayOf(false) }
+
+    // Gestur sama seperti mode Modern: ketuk dua kali, tahan lama, geser atas/bawah.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = { vm.runGesture(cfg.gDouble) },
+                    onLongPress = { vm.runGesture(cfg.gLong) }
+                )
+            }
+            .swipes(
+                onStart = { canUp[0] = scroll.canScrollForward; canDown[0] = scroll.canScrollBackward },
+                onEnd = { d, _ ->
+                    if (kotlin.math.abs(d.y) > kotlin.math.abs(d.x) * 1.5f) {
+                        if (d.y < -140f && !canUp[0]) vm.runGesture(cfg.gSwipeUp)
+                        else if (d.y > 140f && !canDown[0]) vm.runGesture(cfg.gSwipeDown)
+                    }
+                }
+            )
+    ) {
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scroll)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -371,6 +398,7 @@ private fun PdaToday(vm: MainVm) {
         if (vm.widgetIds.isNotEmpty()) {
             PdaBox("WIDGET") { WidgetsBlock(vm) }
         }
+    }
     }
 }
 
