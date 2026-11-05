@@ -125,38 +125,30 @@ fun ClockBlock(vm: MainVm, now: Long) {
 }
 
 @Composable
-fun SetupCard(vm: MainVm) {
-    val needPerm = vm.shizuku == ShizukuState.NEED_PERM
-    SCard {
-        Text(
-            if (needPerm) "Izin Shizuku diperlukan" else "Shizuku belum aktif",
-            color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium
-        )
-        Text(
-            if (needPerm) "Beri izin supaya profil performa bisa diterapkan."
-            else "Pasang dan jalankan Shizuku lewat Wireless debugging, lalu kembali ke sini.",
-            color = Pal.soft, fontSize = 13.sp
-        )
-        ActionButton(if (needPerm) "Beri izin" else "Buka Shizuku", primary = true) {
-            if (needPerm) vm.requestPerm() else vm.openShizuku()
-        }
-    }
-}
-
-@Composable
 fun ProfileCard(vm: MainVm) {
     val profiles = vm.profiles
     val current = vm.profile
     val many = profiles.size > 3
-    if (vm.shizuku != ShizukuState.READY) SetupCard(vm)
+    val ready = vm.shizuku == ShizukuState.READY
+    val needPerm = vm.shizuku == ShizukuState.NEED_PERM
     SCard {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Profil performa", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Text(
-                if (vm.shizuku == ShizukuState.READY) "Shizuku aktif" else "Shizuku mati",
-                color = Pal.sub,
-                fontSize = 12.sp
-            )
+            if (ready) {
+                Text("Shizuku aktif", color = Green, fontSize = 12.sp)
+            } else {
+                // Ketuk untuk membuka Shizuku (atau meminta izin jika Shizuku sudah jalan).
+                Text(
+                    if (needPerm) "Beri izin Shizuku" else "Shizuku mati",
+                    color = Red,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable { if (needPerm) vm.requestPerm() else vm.openShizuku() }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
         }
         Row(
             Modifier

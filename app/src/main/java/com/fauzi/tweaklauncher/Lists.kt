@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -49,15 +50,44 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// ---------------------------------------------------------------- Game Hub
+// ---------------------------------------------------------------- Perawatan
+
+private fun healthScore(st: Stats): Triple<Int, String, androidx.compose.ui.graphics.Color> {
+    val tempC = st.tempPct * 50f
+    val pRam = (st.ramPct - 0.65f).coerceAtLeast(0f) / 0.35f * 30f
+    val pSto = (st.storagePct - 0.70f).coerceAtLeast(0f) / 0.30f * 35f
+    val pTemp = (tempC - 35f).coerceAtLeast(0f) / 15f * 35f
+    val score = (100f - pRam - pSto - pTemp).coerceIn(0f, 100f).toInt()
+    val worst = maxOf(pRam, pSto, pTemp)
+    val hint = when {
+        worst < 3f && st.battery in 1..19 -> "Baterai rendah, colokkan charger."
+        worst < 3f -> "Semuanya normal."
+        worst == pSto -> "Penyimpanan hampir penuh. Bersihkan cache."
+        worst == pRam -> "RAM terpakai banyak. Tutup aplikasi yang tidak perlu."
+        else -> "HP terasa panas. Istirahatkan sebentar."
+    }
+    val color = when {
+        score >= 80 -> Green
+        score >= 55 -> Orange
+        else -> Red
+    }
+    return Triple(score, hint, color)
+}
 
 @Composable
-fun GameScreen(vm: MainVm) {
+fun CareScreen(vm: MainVm) {
     val st = vm.stats
     val games = vm.gameApps
-    val last = games.firstOrNull { it.pkg == vm.cfg.lastGame } ?: games.firstOrNull()
+    val sl = vm.sleeping
+    val (score, hint, scoreColor) = healthScore(st)
+    val label = when {
+        score >= 80 -> "Sehat"
+        score >= 55 -> "Cukup"
+        else -> "Perlu perhatian"
+    }
 
     LaunchedEffect(Unit) {
+        vm.loadUsage()
         while (true) {
             vm.refreshStats()
             delay(5000)
@@ -72,50 +102,95 @@ fun GameScreen(vm: MainVm) {
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Column {
-            Text("Game Hub", color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text("Perawatan", color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Text("Profil aktif: ${vm.profile.label}", color = Pal.sub, fontSize = 14.sp)
         }
 
-        if (last == null) {
-            SCard {
-                Text("Belum ada game", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        SCard {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("$score", color = scoreColor, fontSize = 56.sp, fontWeight = FontWeight.Light)
+                Column(Modifier.weight(1f)) {
+                    Text(label, color = Pal.text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(hint, color = Pal.soft, fontSize = 13.sp)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                StatBar("RAM", st.ramText, st.ramPct, Pal.accent, Modifier.weight(1f))
+                StatBar("Penyimpanan", "${(st.storagePct * 100).toInt()}%", st.storagePct, Blue, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                StatBar("Suhu", st.tempText, st.tempPct, Orange, Modifier.weight(1f))
+                StatBar("Baterai", "${st.battery}%", st.battery / 100f, Green, Modifier.weight(1f))
+            }
+        }
+
+        SCard {
+            Text("Alat cepat", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            ActionButton("Bersihkan cache", Modifier.fillMaxWidth(), primary = true) {
+                vm.runTool("Membersihkan cache") { Tweaks.trimCaches() }
+            }
+            ActionButton("Optimalkan semua aplikasi", Modifier.fillMaxWidth()) {
+                vm.runTool("Menjalankan optimasi") { Tweaks.dexoptAll() }
+            }
+            ActionButton("Cari aplikasi jarang dipakai", Modifier.fillMaxWidth()) { vm.loadUnused(14) }
+            if (vm.unused.isNotEmpty()) {
                 Text(
-                    "Buka tab Aplikasi, tahan lama sebuah aplikasi, lalu pilih Tandai sebagai game.",
+                    vm.unused.take(8).joinToString(", ") { it.label } + if (vm.unused.size > 8) ", ..." else "",
                     color = Pal.soft,
                     fontSize = 13.sp
                 )
+                ActionButton("Tidurkan semua (${vm.unused.size})", Modifier.fillMaxWidth(), primary = true) {
+                    vm.sleepAll(vm.unused)
+                }
+            }
+            if (sl.isNotEmpty()) {
+                ActionButton("Bangunkan semua (${sl.size})", Modifier.fillMaxWidth()) { vm.wakeAll() }
+            }
+        }
+
+        if (!vm.usageOk) {
+            SCard {
+                Text("Favorit dan terakhir dipakai", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "Beri akses penggunaan supaya launcher bisa menampilkan aplikasi yang paling sering dan terakhir kamu pakai.",
+                    color = Pal.soft,
+                    fontSize = 13.sp
+                )
+                ActionButton("Beri akses penggunaan", Modifier.fillMaxWidth(), primary = true) { vm.openUsageAccess() }
             }
         } else {
-            SCard {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    AppIcon(last, 64.dp)
-                    Column {
-                        Text("Terakhir dimainkan", color = Pal.sub, fontSize = 12.sp)
-                        Text(
-                            last.label,
-                            color = Pal.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+            if (vm.recentApps.isNotEmpty()) {
+                SCard {
+                    Text("Terakhir dipakai", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        vm.recentApps.forEach { a -> AppTile(a, Modifier.width(76.dp), vm, a.pkg in sl) }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("Layar", "${st.hz} Hz", Modifier.weight(1f))
-                    Chip("Suhu", st.tempText, Modifier.weight(1f))
-                    Chip("RAM", st.ramText, Modifier.weight(1f))
-                }
-                ActionButton("Boost dan Main", Modifier.fillMaxWidth(), primary = true) {
-                    vm.launchApp(last.pkg)
+            }
+            if (vm.oftenApps.isNotEmpty()) {
+                SCard {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Paling sering dipakai", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("7 hari", color = Pal.sub, fontSize = 12.sp)
+                    }
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        vm.oftenApps.forEach { a -> AppTile(a, Modifier.width(76.dp), vm, a.pkg in sl) }
+                    }
                 }
             }
+            if (vm.recentApps.isEmpty() && vm.oftenApps.isEmpty()) {
+                SCard {
+                    Text("Belum ada data pemakaian", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text("Pakai beberapa aplikasi dulu, daftar akan terisi sendiri.", color = Pal.soft, fontSize = 13.sp)
+                }
+            }
+        }
 
+        if (games.isNotEmpty()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Game kamu", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                Text("Boost per game", color = Pal.sub, fontSize = 12.sp)
+                Text("Aplikasi Boost", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text("Profil Boost otomatis", color = Pal.sub, fontSize = 12.sp)
             }
-
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 games.chunked(2).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -203,54 +278,31 @@ fun DrawerScreen(vm: MainVm) {
         Modifier.fillMaxSize().padding(start = 20.dp, end = 20.dp, top = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Aplikasi", color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-
-        BasicTextField(
-            value = q,
-            onValueChange = { q = it },
-            singleLine = true,
-            textStyle = TextStyle(color = Pal.text, fontSize = 15.sp),
-            cursorBrush = SolidColor(Pal.accent),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(searchShape)
-                .background(Pal.card)
-                .border(1.dp, Pal.line, searchShape)
-                .padding(horizontal = 20.dp),
-            decorationBox = { inner ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
-                    if (q.isEmpty()) Text("Cari di ${vm.visibleApps.size} aplikasi", color = Pal.sub, fontSize = 15.sp)
-                    inner()
-                }
-            }
-        )
-
-        Row(
-            Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("Semua", "Game", "Tersemat", "Tidur", "Tersembunyi").forEachIndexed { i, label ->
-                Box(
-                    Modifier
-                        .height(36.dp)
-                        .clip(CircleShape)
-                        .background(if (filter == i) Pal.accent else Pal.card)
-                        .border(1.dp, if (filter == i) Pal.accent else Pal.line, CircleShape)
-                        .clickable { filter = i }
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        label,
-                        color = if (filter == i) Pal.onAccent else Pal.soft,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Aplikasi",
+                color = Pal.text,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Pal.card)
+                    .border(1.dp, Pal.line, CircleShape)
+                    .clickable {
+                        vm.settingsPage = ""
+                        vm.screen = Screen.Settings
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                GearIcon(Pal.text, 22.dp)
             }
         }
 
+        // Daftar di tengah; filter dan pencarian di bawah supaya dekat jempol.
         if (cfg.drawerStyle == "grid") {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(cfg.drawerCols.coerceIn(3, 6)),
@@ -289,7 +341,7 @@ fun DrawerScreen(vm: MainVm) {
                                 )
                                 Text(a.pkg, color = Pal.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            if (a.pkg in games) Tag("Game")
+                            if (a.pkg in games) Tag("Boost")
                             if (a.pkg in sleeping) Tag("Tidur", Orange)
                         }
                     }
@@ -318,5 +370,74 @@ fun DrawerScreen(vm: MainVm) {
                 }
             }
         }
+
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("Semua", "Boost", "Tersemat", "Tidur", "Tersembunyi").forEachIndexed { i, label ->
+                Box(
+                    Modifier
+                        .height(36.dp)
+                        .clip(CircleShape)
+                        .background(if (filter == i) Pal.accent else Pal.card)
+                        .border(1.dp, if (filter == i) Pal.accent else Pal.line, CircleShape)
+                        .clickable { filter = i }
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        label,
+                        color = if (filter == i) Pal.onAccent else Pal.soft,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        BasicTextField(
+            value = q,
+            onValueChange = { q = it },
+            singleLine = true,
+            textStyle = TextStyle(color = Pal.text, fontSize = 15.sp),
+            cursorBrush = SolidColor(Pal.accent),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(searchShape)
+                .background(Pal.card)
+                .border(1.dp, Pal.line, searchShape)
+                .padding(horizontal = 20.dp),
+            decorationBox = { inner ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+                    if (q.isEmpty()) Text("Cari di ${vm.visibleApps.size} aplikasi", color = Pal.sub, fontSize = 15.sp)
+                    inner()
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun GearIcon(color: androidx.compose.ui.graphics.Color, size: androidx.compose.ui.unit.Dp) {
+    androidx.compose.foundation.Canvas(Modifier.size(size)) {
+        val c = center
+        val r = this.size.minDimension / 2f
+        val stroke = r * 0.28f
+        for (i in 0 until 8) {
+            val ang = Math.toRadians(i * 45.0)
+            val dx = Math.cos(ang).toFloat()
+            val dy = Math.sin(ang).toFloat()
+            drawLine(
+                color,
+                androidx.compose.ui.geometry.Offset(c.x + dx * r * 0.62f, c.y + dy * r * 0.62f),
+                androidx.compose.ui.geometry.Offset(c.x + dx * r * 0.95f, c.y + dy * r * 0.95f),
+                strokeWidth = stroke * 1.15f,
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+        }
+        drawCircle(color, radius = r * 0.62f - stroke / 2f, center = c, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+        drawCircle(color, radius = r * 0.2f, center = c)
     }
 }

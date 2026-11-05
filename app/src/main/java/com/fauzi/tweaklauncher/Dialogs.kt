@@ -42,7 +42,7 @@ fun AppMenu(vm: MainVm) {
         title = { Text(a.label, color = Pal.text) },
         text = {
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                MenuItem(if (isGame) "Hapus dari Game" else "Tandai sebagai game") { vm.toggleGame(a.pkg); close() }
+                MenuItem(if (isGame) "Hapus dari Boost" else "Tandai sebagai Boost") { vm.toggleGame(a.pkg); close() }
                 MenuItem(if (vm.isPinned(a.pkg)) "Lepas dari Beranda" else "Sematkan ke Beranda") { vm.togglePin(a.pkg); close() }
                 MenuItem(if (inDock) "Lepas dari dock" else "Taruh di dock") { vm.toggleDock(a.pkg); close() }
                 if (folder != null) {

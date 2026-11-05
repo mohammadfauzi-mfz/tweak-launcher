@@ -355,7 +355,7 @@ private fun AutomationPage(vm: MainVm) {
             cfg.autoApp
         ) { vm.setAutoApp(it) }
         Text(
-            "Atur profil tiap aplikasi lewat tahan lama aplikasi, lalu Profil khusus. Game dengan Boost aktif otomatis memakai profil Game.",
+            "Atur profil tiap aplikasi lewat tahan lama aplikasi, lalu Profil khusus. Aplikasi Boost aktif otomatis memakai profil Boost.",
             color = Pal.sub, fontSize = 12.sp
         )
     }

@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.io.File
 
-enum class Screen { Home, Game, Drawer, Settings }
+enum class Screen { Home, Care, Drawer, Settings }
 
 data class AppItem(
     val label: String,
@@ -78,6 +78,11 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
 
     // Alat
     var unused by mutableStateOf<List<AppItem>>(emptyList())
+
+    // Favorit dan terakhir dipakai (dari statistik penggunaan)
+    var recentApps by mutableStateOf<List<AppItem>>(emptyList())
+    var oftenApps by mutableStateOf<List<AppItem>>(emptyList())
+    var usageOk by mutableStateOf(false)
 
     var pendingWidget = -1
     private var autoRestore = false
@@ -346,6 +351,45 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun openUsageAccess() {
+        startSettings(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+    }
+
+    /** Memuat aplikasi yang terakhir dan paling sering dipakai (7 hari terakhir). */
+    fun loadUsage() {
+        usageOk = Sys.hasUsageAccess(app)
+        if (!usageOk) {
+            recentApps = emptyList()
+            oftenApps = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            val all = apps
+            val hid = hidden
+            val (recent, often) = withContext(Dispatchers.Default) {
+                val usm = app.getSystemService(UsageStatsManager::class.java)
+                val now = System.currentTimeMillis()
+                val st = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 7L * 86_400_000L, now)
+                val last = HashMap<String, Long>()
+                val total = HashMap<String, Long>()
+                st.forEach { s ->
+                    last[s.packageName] = maxOf(last[s.packageName] ?: 0L, s.lastTimeUsed)
+                    total[s.packageName] = (total[s.packageName] ?: 0L) + s.totalTimeInForeground
+                }
+                val usable = all.filter { it.pkg !in hid }
+                val r = usable.filter { (last[it.pkg] ?: 0L) > 0L }
+                    .sortedByDescending { last[it.pkg] ?: 0L }
+                    .take(8)
+                val o = usable.filter { (total[it.pkg] ?: 0L) > 60_000L }
+                    .sortedByDescending { total[it.pkg] ?: 0L }
+                    .take(8)
+                Pair(r, o)
+            }
+            recentApps = recent
+            oftenApps = often
+        }
+    }
+
     // ---------------- Folder ----------------
 
     val folders: Map<String, List<String>> get() = Store.folders(cfg.foldersJson)
@@ -462,7 +506,7 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     fun runGesture(action: String) {
         when (action) {
             "drawer" -> screen = Screen.Drawer
-            "game" -> screen = Screen.Game
+            "care", "game" -> screen = Screen.Care
             "settings" -> {
                 settingsPage = ""
                 screen = Screen.Settings

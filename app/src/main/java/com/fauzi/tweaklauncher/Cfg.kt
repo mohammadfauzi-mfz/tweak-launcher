@@ -209,7 +209,7 @@ object Layout {
 val GESTURE_ACTIONS = listOf(
     "none" to "Tidak ada",
     "drawer" to "Daftar aplikasi",
-    "game" to "Game Hub",
+    "care" to "Perawatan",
     "notif" to "Panel notifikasi",
     "lock" to "Kunci layar",
     "settings" to "Setelan launcher",

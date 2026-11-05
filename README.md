@@ -6,7 +6,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 **Performa**
 - Profil Game / Hemat / Normal (animasi, refresh rate, mode hemat daya), bisa diubah, ditambah, dan dihapus.
 - Profil khusus per aplikasi dan jadwal profil per jam, berjalan lewat layanan latar.
-- Game Hub dengan boost per game; profil kembali ke semula saat pulang ke launcher.
+- Halaman Perawatan: skor kesehatan HP, alat cepat (cache, optimasi, tidurkan aplikasi), aplikasi terakhir dan paling sering dipakai, serta Boost per aplikasi.
 - Overlay monitor (Hz, RAM, suhu, baterai) di atas aplikasi lain.
 - Optimalkan (compile speed), hentikan paksa, tidurkan aplikasi (dan cari yang jarang dipakai), bersihkan cache, dexopt.
 - Atur DPI dan resolusi dengan konfirmasi 15 detik dan kembali otomatis.

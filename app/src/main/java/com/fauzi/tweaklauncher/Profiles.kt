@@ -21,7 +21,7 @@ data class Profile(
 
 object ProfileStore {
     val DEFAULT = listOf(
-        Profile("game", "Game", "0.5", 120, false),
+        Profile("game", "Boost", "0.5", 120, false),
         Profile("hemat", "Hemat", "0", 60, true),
         Profile("normal", "Normal", "1", 0, false)
     )
@@ -32,9 +32,12 @@ object ProfileStore {
             val a = JSONArray(json)
             val l = List(a.length()) { i ->
                 val o = a.getJSONObject(i)
+                val id = o.getString("id")
+                val label = o.getString("label")
                 Profile(
-                    o.getString("id"),
-                    o.getString("label"),
+                    id,
+                    // Nama lama "Game" diganti "Boost" untuk profil bawaan.
+                    if (id == "game" && label == "Game") "Boost" else label,
                     o.getString("anim"),
                     o.getInt("refresh"),
                     o.getBoolean("saver")

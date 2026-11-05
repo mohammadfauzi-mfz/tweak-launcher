@@ -62,7 +62,7 @@ fun Root(vm: MainVm) {
             Box(Modifier.weight(1f)) {
                 when (vm.screen) {
                     Screen.Home -> HomeScreen(vm)
-                    Screen.Game -> GameScreen(vm)
+                    Screen.Care -> CareScreen(vm)
                     Screen.Drawer -> DrawerScreen(vm)
                     Screen.Settings -> SettingsScreen(vm)
                 }
@@ -95,12 +95,10 @@ fun NavBar(vm: MainVm) {
     ) {
         listOf(
             Screen.Home to "Beranda",
-            Screen.Game to "Game",
-            Screen.Drawer to "Aplikasi",
-            Screen.Settings to "Setelan"
+            Screen.Care to "Perawatan",
+            Screen.Drawer to "Aplikasi"
         ).forEach { (s, label) ->
             Pill(label, vm.screen == s, Modifier.weight(1f).fillMaxHeight()) {
-                if (s == Screen.Settings && vm.screen != Screen.Settings) vm.settingsPage = ""
                 vm.screen = s
             }
         }
