@@ -55,6 +55,9 @@ fun AppMenu(vm: MainVm) {
                     if (isSleeping) vm.wakeApp(a.pkg) else vm.sleepApp(a.pkg)
                     close()
                 }
+                if (vm.cfg.badgeOn) {
+                    MenuItem(if (a.pkg in Sys.list(vm.cfg.badgeOffCsv)) "Nyalakan badge" else "Matikan badge") { vm.toggleBadge(a.pkg); close() }
+                }
                 MenuItem("Optimalkan (compile speed)") { vm.optimize(a.pkg); close() }
                 MenuItem("Hentikan paksa") { vm.forceStop(a.pkg); close() }
                 MenuItem("Info aplikasi") { vm.openInfo(a.pkg); close() }

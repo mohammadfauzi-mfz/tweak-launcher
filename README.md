@@ -16,6 +16,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Latar warna polos atau wallpaper sistem dengan redaman.
 - Bentuk ikon (squircle, bulat, kotak membulat, kotak, tetesan), ukuran ikon, label, kolom.
 - Susunan Beranda: tampil/sembunyi dan urutan (jam, profil, statistik, aplikasi, widget).
+- Badge notifikasi di ikon (angka atau titik, warna dan pengecualian per aplikasi), butuh akses notifikasi.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.
 - Gestur: geser atas/bawah, ketuk dua kali, tahan lama; aksinya bisa dipilih.

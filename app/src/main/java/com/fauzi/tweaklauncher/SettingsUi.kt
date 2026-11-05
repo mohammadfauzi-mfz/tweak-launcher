@@ -263,11 +263,33 @@ private fun IconsPage(vm: MainVm) {
             cfg.iconShape
         ) { cfg.iconShape = it }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            vm.apps.take(6).forEach { AppIcon(it, 44.dp) }
+            vm.apps.take(6).forEach { AppIcon(it, 44.dp, badge = false) }
         }
         IntSlider("Ukuran ikon", " dp", cfg.iconSize, 40, 72) { cfg.iconSize = it }
         SwitchRow("Tampilkan nama aplikasi", null, cfg.showLabels) { cfg.showLabels = it }
         if (cfg.showLabels) IntSlider("Ukuran teks nama", " sp", cfg.labelSize, 10, 15) { cfg.labelSize = it }
+    }
+    SCard {
+        SwitchRow("Badge notifikasi", "Titik atau angka di ikon aplikasi yang punya notifikasi", cfg.badgeOn) {
+            cfg.badgeOn = it
+            if (it && !vm.notifAccess) vm.openNotifAccess()
+        }
+        if (cfg.badgeOn) {
+            if (!vm.notifAccess) {
+                Text(
+                    "Akses notifikasi belum diberikan. Pilih Tweak Launcher di daftar, lalu nyalakan. Jika Android menolak, buka Info aplikasi > menu titik tiga > Izinkan setelan terbatas.",
+                    color = Orange, fontSize = 12.sp
+                )
+                ActionButton("Beri akses notifikasi", Modifier.fillMaxWidth(), primary = true) { vm.openNotifAccess() }
+            }
+            ChoiceRow("Gaya badge", listOf("count" to "Angka", "dot" to "Titik"), cfg.badgeStyle) { cfg.badgeStyle = it }
+            ChoiceRow(
+                "Warna badge",
+                listOf("FF5252" to "Merah", "accent" to "Aksen", "FFB300" to "Kuning", "4ADE80" to "Hijau", "7DB8FF" to "Biru"),
+                cfg.badgeColor
+            ) { cfg.badgeColor = it }
+            Text("Untuk mematikan badge satu aplikasi, tahan lama aplikasinya lalu pilih Badge.", color = Pal.sub, fontSize = 12.sp)
+        }
     }
     SCard {
         ChoiceRow("Gaya daftar aplikasi", listOf("list" to "Daftar", "grid" to "Kotak"), cfg.drawerStyle) { cfg.drawerStyle = it }

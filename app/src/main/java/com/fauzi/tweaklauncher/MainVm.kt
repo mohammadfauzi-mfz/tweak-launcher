@@ -173,6 +173,7 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
 
     fun onResumed() {
         refreshShizuku()
+        refreshNotifAccess()
         if (autoRestore) {
             autoRestore = false
             val base = baseProfile
@@ -243,6 +244,22 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
 
     fun toggleBoost(pkg: String) {
         cfg.boostOffCsv = Sys.join(if (pkg in boostOff) boostOff - pkg else boostOff + pkg)
+    }
+
+    var notifAccess by mutableStateOf(false)
+
+    fun refreshNotifAccess() {
+        val l = Settings.Secure.getString(app.contentResolver, "enabled_notification_listeners") ?: ""
+        notifAccess = l.contains(app.packageName)
+    }
+
+    fun openNotifAccess() {
+        startSettings(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+
+    fun toggleBadge(pkg: String) {
+        val l = Sys.list(cfg.badgeOffCsv)
+        cfg.badgeOffCsv = Sys.join(if (pkg in l) l - pkg else l + pkg)
     }
 
     fun toggleHidden(pkg: String) {

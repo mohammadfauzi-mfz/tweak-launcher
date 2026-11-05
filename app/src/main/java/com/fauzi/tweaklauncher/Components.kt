@@ -276,16 +276,48 @@ fun MenuItem(label: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false) {
-    val shape = iconShape(LocalCfg.current.iconShape)
-    Image(
-        bitmap = app.icon,
-        contentDescription = app.label,
-        modifier = modifier
-            .size(size)
-            .alpha(if (dim) 0.45f else 1f)
-            .clip(shape)
-    )
+fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false, badge: Boolean = true) {
+    val cfg = LocalCfg.current
+    val shape = iconShape(cfg.iconShape)
+    Box(modifier.size(size)) {
+        Image(
+            bitmap = app.icon,
+            contentDescription = app.label,
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (dim) 0.45f else 1f)
+                .clip(shape)
+        )
+        if (badge && cfg.badgeOn) {
+            val n = Badges.counts[app.pkg] ?: 0
+            if (n > 0 && app.pkg !in Sys.list(cfg.badgeOffCsv)) {
+                val col = if (cfg.badgeColor == "accent") Pal.accent else runCatching {
+                    Color(android.graphics.Color.parseColor("#" + cfg.badgeColor))
+                }.getOrDefault(Red)
+                val showNum = cfg.badgeStyle == "count"
+                val d = if (showNum) (size * 0.36f).coerceAtLeast(16.dp) else (size * 0.24f).coerceAtLeast(10.dp)
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .size(d)
+                        .clip(CircleShape)
+                        .background(col)
+                        .border(1.5.dp, Pal.bg, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (showNum) {
+                        Text(
+                            if (n > 99) "99+" else n.toString(),
+                            color = Color.White,
+                            fontSize = (d.value * 0.5f).coerceAtMost(11f).sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -340,7 +372,7 @@ fun FolderTile(name: String, apps: List<AppItem>, modifier: Modifier, vm: MainVm
             val first = apps.take(4)
             first.chunked(2).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    row.forEach { a -> AppIcon(a, mini) }
+                    row.forEach { a -> AppIcon(a, mini, badge = false) }
                 }
             }
         }
