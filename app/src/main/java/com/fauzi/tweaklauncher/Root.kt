@@ -20,6 +20,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.getBottom
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -29,6 +33,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -66,7 +71,7 @@ fun Root(vm: MainVm) {
                     .background((if (dark) Color.Black else Color.White).copy(alpha = cfg.dim / 100f))
             )
         }
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
             Box(
                 Modifier
                     .weight(1f)
@@ -99,7 +104,9 @@ fun Root(vm: MainVm) {
                     }
                 }
             }
-            NavBar(vm)
+            // Saat keyboard terbuka, bar bawah disembunyikan supaya kolom cari tepat di atas keyboard.
+            val imeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+            if (!imeOpen) NavBar(vm)
         }
         AppMenu(vm)
         FolderPickDialog(vm)
