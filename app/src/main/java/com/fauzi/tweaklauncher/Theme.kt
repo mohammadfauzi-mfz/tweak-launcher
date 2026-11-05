@@ -88,6 +88,20 @@ fun xpPalette() = Palette(
     accent = Color(0xFF0A5FE0), onAccent = Color(0xFFFFFFFF), radius = 4.dp, dark = false, wallpaper = false
 )
 
+/** Palet terminal DOS: latar hitam, teks satu warna (hijau, abu-abu, atau amber). */
+fun dosPalette(color: String): Palette {
+    val fg = when (color) {
+        "amber" -> Color(0xFFFFB000)
+        "gray" -> Color(0xFFC8C8C8)
+        else -> Color(0xFF33FF66)
+    }
+    return Palette(
+        bg = Color(0xFF000000), card = Color(0xFF0A0A0A), inset = Color(0xFF000000),
+        line = fg.copy(alpha = 0.45f), text = fg, soft = fg, sub = fg.copy(alpha = 0.65f),
+        accent = fg, onAccent = Color(0xFF000000), radius = 0.dp, dark = true, wallpaper = false
+    )
+}
+
 fun iconShape(name: String): Shape = when (name) {
     "circle" -> CircleShape
     "rounded" -> RoundedCornerShape(percent = 24)
@@ -115,7 +129,7 @@ object Pal {
     val shape: Shape @androidx.compose.runtime.Composable get() = RoundedCornerShape(LocalPal.current.radius)
     val pill: Shape @androidx.compose.runtime.Composable get() = when (LocalCfg.current.uiMode) {
         "pda" -> RoundedCornerShape(3.dp)
-        "win95" -> androidx.compose.ui.graphics.RectangleShape
+        "win95", "dos" -> androidx.compose.ui.graphics.RectangleShape
         "xp" -> RoundedCornerShape(4.dp)
         else -> CircleShape
     }
@@ -124,8 +138,8 @@ object Pal {
 @Composable
 fun TweakTheme(cfg: Cfg, content: @Composable () -> Unit) {
     val pda = cfg.uiMode == "pda"
-    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette() else if (cfg.uiMode == "xp") xpPalette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
-    val ff = if (pda) FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp") FontFamily.SansSerif else when (cfg.font) {
+    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette() else if (cfg.uiMode == "xp") xpPalette() else if (cfg.uiMode == "dos") dosPalette(cfg.dosColor) else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
+    val ff = if (pda || cfg.uiMode == "dos") FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp") FontFamily.SansSerif else when (cfg.font) {
         "serif" -> FontFamily.Serif
         "mono" -> FontFamily.Monospace
         "cursive" -> FontFamily.Cursive

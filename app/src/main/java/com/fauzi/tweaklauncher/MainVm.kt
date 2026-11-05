@@ -50,6 +50,28 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     var screen by mutableStateOf(Screen.Home)
     var pdaStart by mutableStateOf(false)
 
+    // Mode DOS: keluaran terminal dan daftar terakhir yang ditampilkan (untuk perintah nomor).
+    val dosLines = mutableStateListOf<DosLine>()
+    var dosListed: List<AppItem> = emptyList()
+
+    fun dosPrint(text: String, pkg: String? = null) {
+        dosLines.add(DosLine(text, pkg))
+        while (dosLines.size > 600) dosLines.removeAt(0)
+    }
+
+    fun dosShell(cmd: String) {
+        if (shizuku != ShizukuState.READY) {
+            dosPrint("Shizuku belum aktif.")
+            return
+        }
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) { Shell.run(cmd) }
+            val out = r.second.trimEnd()
+            if (out.isNotEmpty()) out.lines().take(300).forEach { dosPrint(it) }
+            if (r.first != 0) dosPrint("(kode keluar ${r.first})")
+        }
+    }
+
     // Mode Windows 95: jendela yang terbuka (tombol di taskbar) dan menu Start.
     val w95Windows = mutableStateListOf<Screen>()
     var w95Start by mutableStateOf(false)

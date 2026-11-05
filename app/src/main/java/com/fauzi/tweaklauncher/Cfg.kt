@@ -67,6 +67,7 @@ class Cfg(ctx: Context) {
     // ---- Tampilan ----
     var uiMode by s("uiMode", "modern")
     var pdaMono by s("pdaMono", true)
+    var dosColor by s("dosColor", "green")
     var theme by s("theme", "amoled")
     var accent by s("accent", "#C6F432")
     var iconShape by s("iconShape", "squircle")
