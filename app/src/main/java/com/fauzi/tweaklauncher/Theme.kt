@@ -81,6 +81,13 @@ fun win95Palette() = Palette(
     accent = Color(0xFF000080), onAccent = Color(0xFFFFFFFF), radius = 0.dp, dark = false, wallpaper = false
 )
 
+/** Palet Windows XP (Luna): jendela krem, aksen biru XP. */
+fun xpPalette() = Palette(
+    bg = Color(0xFF2B6FDC), card = Color(0xFFECE9D8), inset = Color(0xFFFFFFFF),
+    line = Color(0xFF7F9DB9), text = Color(0xFF000000), soft = Color(0xFF1A1A1A), sub = Color(0xFF404040),
+    accent = Color(0xFF0A5FE0), onAccent = Color(0xFFFFFFFF), radius = 4.dp, dark = false, wallpaper = false
+)
+
 fun iconShape(name: String): Shape = when (name) {
     "circle" -> CircleShape
     "rounded" -> RoundedCornerShape(percent = 24)
@@ -109,6 +116,7 @@ object Pal {
     val pill: Shape @androidx.compose.runtime.Composable get() = when (LocalCfg.current.uiMode) {
         "pda" -> RoundedCornerShape(3.dp)
         "win95" -> androidx.compose.ui.graphics.RectangleShape
+        "xp" -> RoundedCornerShape(4.dp)
         else -> CircleShape
     }
 }
@@ -116,8 +124,8 @@ object Pal {
 @Composable
 fun TweakTheme(cfg: Cfg, content: @Composable () -> Unit) {
     val pda = cfg.uiMode == "pda"
-    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
-    val ff = if (pda) FontFamily.Monospace else if (cfg.uiMode == "win95") FontFamily.SansSerif else when (cfg.font) {
+    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette() else if (cfg.uiMode == "xp") xpPalette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
+    val ff = if (pda) FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp") FontFamily.SansSerif else when (cfg.font) {
         "serif" -> FontFamily.Serif
         "mono" -> FontFamily.Monospace
         "cursive" -> FontFamily.Cursive

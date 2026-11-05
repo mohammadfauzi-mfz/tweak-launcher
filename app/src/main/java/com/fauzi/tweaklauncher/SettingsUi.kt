@@ -139,7 +139,7 @@ private fun AppearancePage(vm: MainVm) {
     SCard {
         ChoiceRow(
             "Mode tampilan",
-            listOf("modern" to "Modern", "pda" to "PDA (Palm + Pocket PC)", "win95" to "Windows 95"),
+            listOf("modern" to "Modern", "pda" to "PDA (Palm + Pocket PC)", "win95" to "Windows 95", "xp" to "Windows XP"),
             cfg.uiMode
         ) {
             cfg.uiMode = it

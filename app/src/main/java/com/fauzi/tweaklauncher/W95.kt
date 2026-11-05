@@ -81,7 +81,7 @@ fun Modifier.bevel(raised: Boolean = true): Modifier = this.drawBehind {
     drawRect(br2, Offset(w - 2 * t, t), Size(t, h - 2 * t))
 }
 
-private fun w95Title(s: Screen) = when (s) {
+internal fun w95Title(s: Screen) = when (s) {
     Screen.Home -> "Desktop"
     Screen.Care -> "Komputer Saya"
     Screen.Drawer -> "Program"
@@ -110,7 +110,7 @@ fun W95Frame(vm: MainVm) {
 // ---------------------------------------------------------------- Ikon gambar
 
 @Composable
-private fun W95Icon(kind: Int, dp: Dp) {
+internal fun W95Icon(kind: Int, dp: Dp) {
     Canvas(Modifier.size(dp)) {
         val w = this.size.width
         when (kind) {
