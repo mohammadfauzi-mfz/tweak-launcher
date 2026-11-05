@@ -70,7 +70,7 @@ fun Root(vm: MainVm) {
                     .background((if (dark) Color.Black else Color.White).copy(alpha = cfg.dim / 100f))
             )
         }
-        Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
+        if (cfg.uiMode == "pda") PdaFrame(vm) else Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
             Box(
                 Modifier
                     .weight(1f)

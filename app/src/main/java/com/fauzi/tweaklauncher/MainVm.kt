@@ -47,6 +47,7 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     val cfg = Cfg(app)
 
     var screen by mutableStateOf(Screen.Home)
+    var pdaStart by mutableStateOf(false)
     var settingsPage by mutableStateOf("")
     var shizuku by mutableStateOf(ShizukuState.OFF)
     var apps by mutableStateOf<List<AppItem>>(emptyList())

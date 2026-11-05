@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
         // Tombol Home ditekan: kembali ke Beranda.
         vm.screen = Screen.Home
         vm.menuApp = null
+        vm.pdaStart = false
     }
 
     override fun onDestroy() {

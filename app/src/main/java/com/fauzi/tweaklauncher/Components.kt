@@ -34,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -43,11 +45,23 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** Ikon dijadikan monokrom hijau-abu seperti layar LCD PDA. */
+private val LcdFilter = ColorFilter.colorMatrix(
+    ColorMatrix(
+        floatArrayOf(
+            0.2015f, 0.3957f, 0.0768f, 0f, 28f,
+            0.2027f, 0.3980f, 0.0773f, 0f, 36f,
+            0.1734f, 0.3405f, 0.0661f, 0f, 20f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
+)
+
 @Composable
 fun Pill(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .clip(CircleShape)
+            .clip(Pal.pill)
             .background(if (selected) Pal.accent else Color.Transparent)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -117,9 +131,9 @@ fun ChoiceRow(title: String, options: List<Pair<String, String>>, selected: Stri
                 Box(
                     Modifier
                         .height(36.dp)
-                        .clip(CircleShape)
+                        .clip(Pal.pill)
                         .background(if (on) Pal.accent else Pal.inset)
-                        .border(1.dp, if (on) Pal.accent else Pal.line, CircleShape)
+                        .border(1.dp, if (on) Pal.accent else Pal.line, Pal.pill)
                         .clickable { onSelect(k) }
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
@@ -170,9 +184,9 @@ fun ActionButton(label: String, modifier: Modifier = Modifier, primary: Boolean 
         modifier
             .height(46.dp)
             .alpha(if (enabled) 1f else 0.4f)
-            .clip(CircleShape)
+            .clip(Pal.pill)
             .background(if (primary) Pal.accent else Pal.inset)
-            .border(1.dp, if (primary) Pal.accent else Pal.line, CircleShape)
+            .border(1.dp, if (primary) Pal.accent else Pal.line, Pal.pill)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
@@ -208,9 +222,9 @@ fun InputBox(value: String, onChange: (String) -> Unit, placeholder: String, mod
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(CircleShape)
+            .clip(Pal.pill)
             .background(Pal.inset)
-            .border(1.dp, Pal.line, CircleShape)
+            .border(1.dp, Pal.line, Pal.pill)
             .padding(horizontal = 18.dp),
         decorationBox = { inner ->
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
@@ -259,7 +273,7 @@ fun Tag(text: String, color: Color = Blue) {
     Box(
         Modifier
             .height(26.dp)
-            .clip(CircleShape)
+            .clip(Pal.pill)
             .background(color.copy(alpha = 0.16f))
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center
@@ -278,11 +292,13 @@ fun MenuItem(label: String, onClick: () -> Unit) {
 @Composable
 fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false, badge: Boolean = true) {
     val cfg = LocalCfg.current
-    val shape = iconShape(cfg.iconShape)
+    val pda = cfg.uiMode == "pda"
+    val shape = if (pda) RoundedCornerShape(4.dp) else iconShape(cfg.iconShape)
     Box(modifier.size(size)) {
         Image(
             bitmap = app.icon,
             contentDescription = app.label,
+            colorFilter = if (pda && cfg.pdaMono) LcdFilter else null,
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (dim) 0.45f else 1f)

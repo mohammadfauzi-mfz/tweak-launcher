@@ -67,6 +67,13 @@ fun buildPalette(theme: String, accentHex: String, radius: Int, cardAlpha: Int, 
     }
 }
 
+/** Palet layar LCD PDA (abu-hijau) dengan bar judul biru tua ala Pocket PC. */
+fun pdaPalette() = Palette(
+    bg = Color(0xFFC5CFA8), card = Color(0xFFB8C49A), inset = Color(0xFFABB88C),
+    line = Color(0xFF3A4528), text = Color(0xFF1A2112), soft = Color(0xFF263019), sub = Color(0xFF47552F),
+    accent = Color(0xFF1F2F6B), onAccent = Color(0xFFE6ECCB), radius = 3.dp, dark = false, wallpaper = false
+)
+
 fun iconShape(name: String): Shape = when (name) {
     "circle" -> CircleShape
     "rounded" -> RoundedCornerShape(percent = 24)
@@ -92,12 +99,14 @@ object Pal {
     val dark: Boolean @androidx.compose.runtime.Composable get() = LocalPal.current.dark
     val wallpaper: Boolean @androidx.compose.runtime.Composable get() = LocalPal.current.wallpaper
     val shape: Shape @androidx.compose.runtime.Composable get() = RoundedCornerShape(LocalPal.current.radius)
+    val pill: Shape @androidx.compose.runtime.Composable get() = if (LocalCfg.current.uiMode == "pda") RoundedCornerShape(3.dp) else CircleShape
 }
 
 @Composable
 fun TweakTheme(cfg: Cfg, content: @Composable () -> Unit) {
-    val pal = buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
-    val ff = when (cfg.font) {
+    val pda = cfg.uiMode == "pda"
+    val pal = if (pda) pdaPalette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
+    val ff = if (pda) FontFamily.Monospace else when (cfg.font) {
         "serif" -> FontFamily.Serif
         "mono" -> FontFamily.Monospace
         "cursive" -> FontFamily.Cursive

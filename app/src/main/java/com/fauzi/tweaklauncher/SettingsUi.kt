@@ -138,6 +138,20 @@ private fun AppearancePage(vm: MainVm) {
     val cfg = vm.cfg
     SCard {
         ChoiceRow(
+            "Mode tampilan",
+            listOf("modern" to "Modern", "pda" to "PDA (Palm + Pocket PC)"),
+            cfg.uiMode
+        ) {
+            cfg.uiMode = it
+            vm.pdaStart = false
+        }
+        if (cfg.uiMode == "pda") {
+            SwitchRow("Ikon monokrom LCD", "Ikon aplikasi jadi hijau-abu seperti layar PDA", cfg.pdaMono) { cfg.pdaMono = it }
+            Text("Di mode PDA, tema warna, aksen, font, dan latar diabaikan. Kembali ke Modern untuk memakainya lagi.", color = Pal.sub, fontSize = 12.sp)
+        }
+    }
+    SCard {
+        ChoiceRow(
             "Tema siap pakai",
             listOf("lime" to "Lime Noir", "cyan" to "Cyan Night", "sunset" to "Sunset", "violet" to "Violet Kaca", "light" to "Terang Bersih"),
             ""
