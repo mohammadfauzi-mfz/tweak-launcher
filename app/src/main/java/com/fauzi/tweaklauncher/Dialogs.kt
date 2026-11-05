@@ -161,9 +161,6 @@ fun FolderDialog(vm: MainVm) {
                 }
             }
         },
-        dismissButton = {
-            TextButton(onClick = { vm.deleteFolder(name) }) { Text("Hapus folder", color = Red) }
-        },
         confirmButton = {
             TextButton(onClick = { vm.openFolder = null }) { Text("Tutup", color = Pal.accent) }
         }
