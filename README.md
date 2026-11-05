@@ -18,6 +18,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Susunan Beranda: tampil/sembunyi dan urutan (jam, profil, statistik, aplikasi, widget).
 - Badge notifikasi di ikon (angka atau titik, warna dan pengecualian per aplikasi), butuh akses notifikasi.
 - Mode tampilan PDA (gabungan Palm dan Pocket PC): layar LCD, menu Start, tombol keras, ikon monokrom. Dipilih di Setelan > Tampilan.
+- Mode tampilan Windows 95: desktop teal, taskbar, menu Start, jendela abu-abu timbul.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.
 - Gestur: geser atas/bawah, ketuk dua kali, tahan lama; aksinya bisa dipilih.

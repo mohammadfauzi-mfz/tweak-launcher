@@ -293,7 +293,7 @@ fun MenuItem(label: String, onClick: () -> Unit) {
 fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false, badge: Boolean = true) {
     val cfg = LocalCfg.current
     val pda = cfg.uiMode == "pda"
-    val shape = if (pda) RoundedCornerShape(4.dp) else iconShape(cfg.iconShape)
+    val shape = if (pda) RoundedCornerShape(4.dp) else if (cfg.uiMode == "win95") RoundedCornerShape(2.dp) else iconShape(cfg.iconShape)
     Box(modifier.size(size)) {
         Image(
             bitmap = app.icon,

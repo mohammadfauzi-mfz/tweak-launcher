@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
         vm.screen = Screen.Home
         vm.menuApp = null
         vm.pdaStart = false
+        vm.w95Start = false
     }
 
     override fun onDestroy() {

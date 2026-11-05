@@ -74,6 +74,13 @@ fun pdaPalette() = Palette(
     accent = Color(0xFF1F2F6B), onAccent = Color(0xFFE6ECCB), radius = 3.dp, dark = false, wallpaper = false
 )
 
+/** Palet Windows 95: desktop teal, jendela abu-abu, bar judul biru tua. */
+fun win95Palette() = Palette(
+    bg = Color(0xFF008080), card = Color(0xFFC0C0C0), inset = Color(0xFFFFFFFF),
+    line = Color(0xFF808080), text = Color(0xFF000000), soft = Color(0xFF1A1A1A), sub = Color(0xFF404040),
+    accent = Color(0xFF000080), onAccent = Color(0xFFFFFFFF), radius = 0.dp, dark = false, wallpaper = false
+)
+
 fun iconShape(name: String): Shape = when (name) {
     "circle" -> CircleShape
     "rounded" -> RoundedCornerShape(percent = 24)
@@ -99,14 +106,18 @@ object Pal {
     val dark: Boolean @androidx.compose.runtime.Composable get() = LocalPal.current.dark
     val wallpaper: Boolean @androidx.compose.runtime.Composable get() = LocalPal.current.wallpaper
     val shape: Shape @androidx.compose.runtime.Composable get() = RoundedCornerShape(LocalPal.current.radius)
-    val pill: Shape @androidx.compose.runtime.Composable get() = if (LocalCfg.current.uiMode == "pda") RoundedCornerShape(3.dp) else CircleShape
+    val pill: Shape @androidx.compose.runtime.Composable get() = when (LocalCfg.current.uiMode) {
+        "pda" -> RoundedCornerShape(3.dp)
+        "win95" -> androidx.compose.ui.graphics.RectangleShape
+        else -> CircleShape
+    }
 }
 
 @Composable
 fun TweakTheme(cfg: Cfg, content: @Composable () -> Unit) {
     val pda = cfg.uiMode == "pda"
-    val pal = if (pda) pdaPalette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
-    val ff = if (pda) FontFamily.Monospace else when (cfg.font) {
+    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
+    val ff = if (pda) FontFamily.Monospace else if (cfg.uiMode == "win95") FontFamily.SansSerif else when (cfg.font) {
         "serif" -> FontFamily.Serif
         "mono" -> FontFamily.Monospace
         "cursive" -> FontFamily.Cursive

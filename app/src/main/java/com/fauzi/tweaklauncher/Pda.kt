@@ -405,7 +405,7 @@ private fun PdaToday(vm: MainVm) {
 // ---------------------------------------------------------------- Programs
 
 @Composable
-private fun PdaPrograms(vm: MainVm) {
+internal fun PdaPrograms(vm: MainVm) {
     val cfg = vm.cfg
     var q by remember { mutableStateOf("") }
     var filter by remember { mutableIntStateOf(0) }

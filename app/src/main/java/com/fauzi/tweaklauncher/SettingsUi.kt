@@ -139,7 +139,7 @@ private fun AppearancePage(vm: MainVm) {
     SCard {
         ChoiceRow(
             "Mode tampilan",
-            listOf("modern" to "Modern", "pda" to "PDA (Palm + Pocket PC)"),
+            listOf("modern" to "Modern", "pda" to "PDA (Palm + Pocket PC)", "win95" to "Windows 95"),
             cfg.uiMode
         ) {
             cfg.uiMode = it
@@ -147,7 +147,9 @@ private fun AppearancePage(vm: MainVm) {
         }
         if (cfg.uiMode == "pda") {
             SwitchRow("Ikon monokrom LCD", "Ikon aplikasi jadi hijau-abu seperti layar PDA", cfg.pdaMono) { cfg.pdaMono = it }
-            Text("Di mode PDA, tema warna, aksen, font, dan latar diabaikan. Kembali ke Modern untuk memakainya lagi.", color = Pal.sub, fontSize = 12.sp)
+        }
+        if (cfg.uiMode != "modern") {
+            Text("Di mode ini, tema warna, aksen, font, dan latar diabaikan. Kembali ke Modern untuk memakainya lagi.", color = Pal.sub, fontSize = 12.sp)
         }
     }
     SCard {

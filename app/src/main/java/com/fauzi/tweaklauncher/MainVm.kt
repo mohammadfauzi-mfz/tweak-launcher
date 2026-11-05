@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
@@ -48,6 +49,21 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
 
     var screen by mutableStateOf(Screen.Home)
     var pdaStart by mutableStateOf(false)
+
+    // Mode Windows 95: jendela yang terbuka (tombol di taskbar) dan menu Start.
+    val w95Windows = mutableStateListOf<Screen>()
+    var w95Start by mutableStateOf(false)
+
+    fun w95Open(s: Screen) {
+        if (s != Screen.Home && s !in w95Windows) w95Windows.add(s)
+        screen = s
+        w95Start = false
+    }
+
+    fun w95Close(s: Screen) {
+        w95Windows.remove(s)
+        screen = Screen.Home
+    }
     var settingsPage by mutableStateOf("")
     var shizuku by mutableStateOf(ShizukuState.OFF)
     var apps by mutableStateOf<List<AppItem>>(emptyList())
