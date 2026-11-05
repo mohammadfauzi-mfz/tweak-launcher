@@ -59,7 +59,19 @@ fun Root(vm: MainVm) {
             )
         }
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Box(Modifier.weight(1f)) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .swipes { d, consumed ->
+                        // Geser kanan kiri untuk pindah tab: Beranda, Perawatan, Aplikasi.
+                        val tabs = listOf(Screen.Home, Screen.Care, Screen.Drawer)
+                        val i = tabs.indexOf(vm.screen)
+                        if (i >= 0 && !consumed && kotlin.math.abs(d.x) > 120f && kotlin.math.abs(d.x) > kotlin.math.abs(d.y) * 2f) {
+                            val n = if (d.x < 0) i + 1 else i - 1
+                            if (n in tabs.indices && vm.menuApp == null) vm.screen = tabs[n]
+                        }
+                    }
+            ) {
                 when (vm.screen) {
                     Screen.Home -> HomeScreen(vm)
                     Screen.Care -> CareScreen(vm)

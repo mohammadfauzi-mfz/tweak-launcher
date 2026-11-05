@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +49,9 @@ fun HomeScreen(vm: MainVm) {
             delay(5000)
         }
     }
+    val scroll = rememberScrollState()
+    val canUp = remember { booleanArrayOf(false) }
+    val canDown = remember { booleanArrayOf(false) }
     val sections = Layout.parse(cfg.homeSections).filter { it.second }.map { it.first }
 
     Column(
@@ -61,23 +63,20 @@ fun HomeScreen(vm: MainVm) {
                     onLongPress = { vm.runGesture(cfg.gLong) }
                 )
             }
-            .pointerInput(Unit) {
-                var total = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { total = 0f },
-                    onDragEnd = {
-                        if (total < -140f) vm.runGesture(cfg.gSwipeUp)
-                        else if (total > 140f) vm.runGesture(cfg.gSwipeDown)
-                    },
-                    onDragCancel = { total = 0f },
-                    onVerticalDrag = { _, dy -> total += dy }
-                )
-            }
+            .swipes(
+                onStart = { canUp[0] = scroll.canScrollForward; canDown[0] = scroll.canScrollBackward },
+                onEnd = { d, _ ->
+                    if (kotlin.math.abs(d.y) > kotlin.math.abs(d.x) * 1.5f) {
+                        if (d.y < -140f && !canUp[0]) vm.runGesture(cfg.gSwipeUp)
+                        else if (d.y > 140f && !canDown[0]) vm.runGesture(cfg.gSwipeDown)
+                    }
+                }
+            )
     ) {
         Column(
             Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
