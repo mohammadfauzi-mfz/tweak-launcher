@@ -102,6 +102,13 @@ fun dosPalette(color: String): Palette {
     )
 }
 
+/** Palet Mac OS klasik (System 7 / Mac OS 8): abu-abu platinum, hitam putih. */
+fun macPalette() = Palette(
+    bg = Color(0xFFA6A6A6), card = Color(0xFFDDDDDD), inset = Color(0xFFFFFFFF),
+    line = Color(0xFF000000), text = Color(0xFF000000), soft = Color(0xFF1A1A1A), sub = Color(0xFF4D4D4D),
+    accent = Color(0xFF000000), onAccent = Color(0xFFFFFFFF), radius = 3.dp, dark = false, wallpaper = false
+)
+
 fun iconShape(name: String): Shape = when (name) {
     "circle" -> CircleShape
     "rounded" -> RoundedCornerShape(percent = 24)
@@ -130,6 +137,7 @@ object Pal {
     val pill: Shape @androidx.compose.runtime.Composable get() = when (LocalCfg.current.uiMode) {
         "pda" -> RoundedCornerShape(3.dp)
         "win95", "dos" -> androidx.compose.ui.graphics.RectangleShape
+        "mac" -> RoundedCornerShape(6.dp)
         "xp" -> RoundedCornerShape(4.dp)
         else -> CircleShape
     }
@@ -138,8 +146,8 @@ object Pal {
 @Composable
 fun TweakTheme(cfg: Cfg, content: @Composable () -> Unit) {
     val pda = cfg.uiMode == "pda"
-    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette() else if (cfg.uiMode == "xp") xpPalette() else if (cfg.uiMode == "dos") dosPalette(cfg.dosColor) else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
-    val ff = if (pda || cfg.uiMode == "dos") FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp") FontFamily.SansSerif else when (cfg.font) {
+    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette() else if (cfg.uiMode == "xp") xpPalette() else if (cfg.uiMode == "dos") dosPalette(cfg.dosColor) else if (cfg.uiMode == "mac") macPalette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
+    val ff = if (pda || cfg.uiMode == "dos") FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp" || cfg.uiMode == "mac") FontFamily.SansSerif else when (cfg.font) {
         "serif" -> FontFamily.Serif
         "mono" -> FontFamily.Monospace
         "cursive" -> FontFamily.Cursive
