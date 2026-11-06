@@ -294,16 +294,32 @@ fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean 
     val cfg = LocalCfg.current
     val pda = cfg.uiMode == "pda"
     val shape = if (pda) RoundedCornerShape(4.dp) else if (cfg.uiMode == "win95" || cfg.uiMode == "xp" || cfg.uiMode == "mac") RoundedCornerShape(if (cfg.uiMode == "win95") 2.dp else 5.dp) else iconShape(cfg.iconShape)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val packName = cfg.appIcon(app.pkg)
+    val packBmp = if (packName != null) IconPack.get(ctx, packName) else null
     Box(modifier.size(size)) {
-        Image(
-            bitmap = app.icon,
-            contentDescription = app.label,
-            colorFilter = if (pda && cfg.pdaMono) LcdFilter else null,
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(if (dim) 0.45f else 1f)
-                .clip(shape)
-        )
+        if (packBmp != null) {
+            Image(
+                bitmap = packBmp,
+                contentDescription = app.label,
+                filterQuality = androidx.compose.ui.graphics.FilterQuality.None,
+                colorFilter = if (cfg.packGray) IconPack.GRAY else null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(size * 0.06f)
+                    .alpha(if (dim) 0.45f else 1f)
+            )
+        } else {
+            Image(
+                bitmap = app.icon,
+                contentDescription = app.label,
+                colorFilter = if (pda && cfg.pdaMono) LcdFilter else null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(if (dim) 0.45f else 1f)
+                    .clip(shape)
+            )
+        }
         if (badge && cfg.badgeOn) {
             val n = Badges.counts[app.pkg] ?: 0
             if (n > 0 && app.pkg !in Sys.list(cfg.badgeOffCsv)) {

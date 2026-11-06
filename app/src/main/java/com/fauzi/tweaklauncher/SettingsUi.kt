@@ -315,6 +315,7 @@ private fun IconsPage(vm: MainVm) {
         if (cfg.drawerStyle == "grid") IntSlider("Kolom daftar", "", cfg.drawerCols, 3, 6) { cfg.drawerCols = it }
         SwitchRow("Tampilkan aplikasi tersembunyi", "Di tab Semua", cfg.showHidden) { cfg.showHidden = it }
     }
+    IconPackCard(vm)
 }
 
 // ---------------------------------------------------------------- Gestur

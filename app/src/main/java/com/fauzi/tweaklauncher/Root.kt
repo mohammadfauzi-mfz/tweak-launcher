@@ -113,6 +113,7 @@ fun Root(vm: MainVm) {
         FolderDialog(vm)
         WidgetPickerDialog(vm, addWidget)
         GroupDialogs(vm)
+        IconPickerDialog(vm)
         UpdateDialog(vm)
         RevertDialog(vm)
     }

@@ -76,6 +76,19 @@ private fun Modifier.macShadow(): Modifier = this.drawBehind {
 
 @Composable
 private fun MacIcon(kind: Int, dp: Dp) {
+    val cfg = LocalCfg.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val packBmp = cfg.sysIcon("mac$kind")?.let { IconPack.get(ctx, it) }
+    if (packBmp != null) {
+        androidx.compose.foundation.Image(
+            bitmap = packBmp,
+            contentDescription = null,
+            filterQuality = androidx.compose.ui.graphics.FilterQuality.None,
+            colorFilter = if (cfg.packGray) IconPack.GRAY else null,
+            modifier = Modifier.size(dp)
+        )
+        return
+    }
     Canvas(Modifier.size(dp)) {
         val w = this.size.width
         val st = Stroke(width = w * 0.05f)
