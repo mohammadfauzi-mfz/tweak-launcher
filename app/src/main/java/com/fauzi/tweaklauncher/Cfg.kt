@@ -132,6 +132,9 @@ class Cfg(ctx: Context) {
     var sleepingCsv by s("sleepingL", "")
     var widgetsCsv by s("widgetsL", "")
     var foldersJson by s("foldersJ", "{}")
+    var groupsJson by s("groupsJ", "{}")
+    var tabOrderCsv by s("tabOrder", "")
+    var tabHiddenCsv by s("tabHidden", "")
     var appProfilesJson by s("appProfilesJ", "{}")
     var profilesJson by s("profilesJ", "")
 

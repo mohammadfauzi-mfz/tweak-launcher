@@ -22,6 +22,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Mode tampilan Windows XP: bukit dan langit, taskbar biru, tombol start hijau, menu Start dua kolom.
 - Mode tampilan DOS: terminal sungguhan (DIR, jalankan program dengan nama atau nomor, MEM, MODE, SH lewat Shizuku), warna hijau, abu-abu, atau amber.
 - Mode tampilan Mac OS klasik: bar menu putih, desktop abu-abu berpola, jendela dengan bar judul bergaris dan bayangan hitam.
+- Grup aplikasi buatan sendiri di tab Aplikasi (satu aplikasi bisa di banyak grup), tab bisa diganti nama, diurutkan, dan disembunyikan.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.
 - Gestur: geser atas/bawah, ketuk dua kali, tahan lama; aksinya bisa dipilih.

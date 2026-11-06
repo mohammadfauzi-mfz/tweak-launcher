@@ -246,7 +246,7 @@ fun MainVm.dosExec(raw: String) {
     when (cmd) {
         "help", "?" -> listOf(
             "Perintah:",
-            " DIR [kata]      daftar program (ketuk baris atau ketik nomor)",
+            " DIR [kata|grup]  daftar program atau isi satu grup (ketuk baris atau ketik nomor)",
             " RECENT          program yang terakhir dipakai",
             " <nama>          jalankan program, mis. whatsapp",
             " MEM             RAM, baterai, suhu, penyimpanan",
@@ -267,8 +267,13 @@ fun MainVm.dosExec(raw: String) {
         "time" -> dosPrint(SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date()))
         "dir", "ls" -> {
             val key = arg.lowercase(Locale.ROOT)
-            val list = if (key.isEmpty()) visibleApps else visibleApps.filter { it.label.lowercase(Locale.ROOT).contains(key) }
-            dosPrint(" Direktori C:\\PROGRAM")
+            val grp = groups.keys.firstOrNull { it.equals(arg, ignoreCase = true) }
+            val list = when {
+                grp != null -> appsForTab("g:$grp")
+                key.isEmpty() -> visibleApps
+                else -> visibleApps.filter { it.label.lowercase(Locale.ROOT).contains(key) }
+            }
+            dosPrint(" Direktori C:\\PROGRAM" + if (grp != null) "\\${grp.uppercase(Locale.ROOT)}" else "")
             dosPrint("")
             dosList(list)
             dosPrint("")

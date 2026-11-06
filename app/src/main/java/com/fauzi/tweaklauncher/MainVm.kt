@@ -50,6 +50,13 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     var screen by mutableStateOf(Screen.Home)
     var pdaStart by mutableStateOf(false)
 
+    // Grup dan tab daftar aplikasi (dipakai semua mode tampilan).
+    var tabSel by mutableStateOf("all")
+    var tabMenu by mutableStateOf<String?>(null)
+    var groupNewOpen by mutableStateOf(false)
+    var groupEditName by mutableStateOf<String?>(null)
+    var groupPickApp by mutableStateOf<AppItem?>(null)
+
     // Mode DOS: keluaran terminal dan daftar terakhir yang ditampilkan (untuk perintah nomor).
     val dosLines = mutableStateListOf<DosLine>()
     var dosListed: List<AppItem> = emptyList()

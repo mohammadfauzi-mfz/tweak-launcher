@@ -408,42 +408,14 @@ private fun PdaToday(vm: MainVm) {
 internal fun PdaPrograms(vm: MainVm) {
     val cfg = vm.cfg
     var q by remember { mutableStateOf("") }
-    var filter by remember { mutableIntStateOf(0) }
-    val games = vm.games
     val sleeping = vm.sleeping
-    val hidden = vm.hidden
-    val pins = Sys.list(cfg.pinnedCsv)
-
-    val source = if (filter == 4) vm.apps.filter { it.pkg in hidden } else vm.visibleApps
-    val list = source.filter { a ->
-        (q.isBlank() || a.label.contains(q, ignoreCase = true)) && when (filter) {
-            1 -> a.pkg in games
-            2 -> a.pkg in pins || "app:${a.pkg}" in pins
-            3 -> a.pkg in sleeping
-            else -> true
-        }
-    }
+    val list = vm.appsForTab(vm.currentTab()).filter { a -> q.isBlank() || a.label.contains(q, ignoreCase = true) }
 
     Column(
         Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf("Semua", "Boost", "Tersemat", "Tidur", "Tersembunyi").forEachIndexed { i, label ->
-                val sel = filter == i
-                Text(
-                    label,
-                    color = if (sel) Pal.bg else Pal.text,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .background(if (sel) Pal.text else Color.Transparent)
-                        .border(1.dp, Pal.text)
-                        .clickable { filter = i }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
-        }
+        AppTabsRow(vm)
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),

@@ -112,6 +112,7 @@ fun Root(vm: MainVm) {
         ProfilePickDialog(vm)
         FolderDialog(vm)
         WidgetPickerDialog(vm, addWidget)
+        GroupDialogs(vm)
         UpdateDialog(vm)
         RevertDialog(vm)
     }

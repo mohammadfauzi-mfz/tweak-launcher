@@ -48,6 +48,7 @@ fun AppMenu(vm: MainVm) {
                 if (folder != null) {
                     MenuItem("Keluarkan dari folder $folder") { vm.removeFromFolder(folder, a.pkg); close() }
                 }
+                MenuItem("Grup...") { vm.groupPickApp = a; close() }
                 MenuItem("Masukkan ke folder...") { vm.folderPickApp = a; close() }
                 MenuItem("Profil khusus untuk aplikasi ini...") { vm.profilePickApp = a; close() }
                 MenuItem(if (isHidden) "Tampilkan di daftar" else "Sembunyikan dari daftar") { vm.toggleHidden(a.pkg); close() }

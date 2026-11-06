@@ -255,21 +255,10 @@ fun GameCard(g: AppItem, vm: MainVm, modifier: Modifier) {
 fun DrawerScreen(vm: MainVm) {
     val cfg = vm.cfg
     var q by remember { mutableStateOf("") }
-    var filter by remember { mutableIntStateOf(0) }
     val games = vm.games
     val sleeping = vm.sleeping
-    val hidden = vm.hidden
-    val pins = Sys.list(cfg.pinnedCsv)
-
-    val source = if (filter == 4) vm.apps.filter { it.pkg in hidden } else vm.visibleApps
-    val list = source.filter { a ->
-        (q.isBlank() || a.label.contains(q, ignoreCase = true)) && when (filter) {
-            1 -> a.pkg in games
-            2 -> a.pkg in pins || "app:${a.pkg}" in pins
-            3 -> a.pkg in sleeping
-            else -> true
-        }
-    }
+    val tab = vm.currentTab()
+    val list = vm.appsForTab(tab).filter { a -> q.isBlank() || a.label.contains(q, ignoreCase = true) }
     val searchShape = CircleShape
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -371,30 +360,7 @@ fun DrawerScreen(vm: MainVm) {
             }
         }
 
-        Row(
-            Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("Semua", "Boost", "Tersemat", "Tidur", "Tersembunyi").forEachIndexed { i, label ->
-                Box(
-                    Modifier
-                        .height(36.dp)
-                        .clip(CircleShape)
-                        .background(if (filter == i) Pal.accent else Pal.card)
-                        .border(1.dp, if (filter == i) Pal.accent else Pal.line, CircleShape)
-                        .clickable { filter = i }
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        label,
-                        color = if (filter == i) Pal.onAccent else Pal.soft,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-        }
+        AppTabsRow(vm)
 
         BasicTextField(
             value = q,
