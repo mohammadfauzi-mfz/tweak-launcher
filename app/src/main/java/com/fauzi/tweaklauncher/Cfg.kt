@@ -24,31 +24,6 @@ class Setting<T : Any>(
         save(value)
     }
 
-    private var aiKey = "\u0000"
-    private var aiMap: Map<String, String> = emptyMap()
-    private var siKey = "\u0000"
-    private var siMap: Map<String, String> = emptyMap()
-
-    /** Ikon paket yang dipilih untuk satu aplikasi, atau null jika memakai ikon asli. */
-    fun appIcon(pkg: String): String? {
-        val j = appIconsJson
-        if (j != aiKey) {
-            aiKey = j
-            aiMap = Store.map(j)
-        }
-        return aiMap[pkg]
-    }
-
-    /** Ikon paket untuk satu ikon sistem launcher, atau null jika memakai gambar bawaan. */
-    fun sysIcon(slot: String): String? {
-        val j = sysIconsJson
-        if (j != siKey) {
-            siKey = j
-            siMap = Store.map(j)
-        }
-        return siMap[slot]
-    }
-
     fun reload() {
         state = load()
     }
@@ -84,6 +59,31 @@ class Cfg(ctx: Context) {
     private val all = mutableListOf<Setting<*>>()
 
     private fun <T : Any> s(key: String, def: T): Setting<T> = Setting(sp, key, def).also { all += it }
+
+    private var aiKey = "\u0000"
+    private var aiMap: Map<String, String> = emptyMap()
+    private var siKey = "\u0000"
+    private var siMap: Map<String, String> = emptyMap()
+
+    /** Ikon paket yang dipilih untuk satu aplikasi, atau null jika memakai ikon asli. */
+    fun appIcon(pkg: String): String? {
+        val j = appIconsJson
+        if (j != aiKey) {
+            aiKey = j
+            aiMap = Store.map(j)
+        }
+        return aiMap[pkg]
+    }
+
+    /** Ikon paket untuk satu ikon sistem launcher, atau null jika memakai gambar bawaan. */
+    fun sysIcon(slot: String): String? {
+        val j = sysIconsJson
+        if (j != siKey) {
+            siKey = j
+            siMap = Store.map(j)
+        }
+        return siMap[slot]
+    }
 
     fun reload() {
         all.forEach { it.reload() }
