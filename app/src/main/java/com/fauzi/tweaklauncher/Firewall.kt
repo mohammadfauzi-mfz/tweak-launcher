@@ -240,18 +240,40 @@ object Firewall {
         val applied = Sys.list(cfg.fwAppliedCsv).toSet()
         var firstErr = ""
         var okCount = 0
+        // Aturan paket hanya berlaku jika rantai firewall "chain3" dinyalakan lebih dulu.
+        val chain = Shell.run("cmd connectivity set-chain3-enabled ${desired.isNotEmpty()}")
         for (p in applied - desired) {
             Shell.run("cmd connectivity set-package-networking-enabled true $p")
         }
         for (p in desired) {
             val r = Shell.run("cmd connectivity set-package-networking-enabled false $p")
-            if (r.first == 0 && !r.second.contains("Exception", true) && !r.second.contains("Unknown", true)) okCount++
-            else if (firstErr.isEmpty()) firstErr = r.second.trim().take(140)
+            if (r.first == 0 && !r.second.contains("Exception", true) && !r.second.contains("Unknown", true)) {
+                okCount++
+                // putuskan koneksi yang sudah terbuka supaya aturan langsung terasa
+                if (p !in applied) Shell.run("am force-stop $p")
+            } else if (firstErr.isEmpty()) firstErr = r.second.trim().take(140)
         }
         cfg.fwAppliedCsv = Sys.join(desired)
-        return if (firstErr.isNotEmpty()) "Gagal untuk sebagian aplikasi. Perintah ini mungkin tidak didukung di versi Android ini: $firstErr"
+        val state = Shell.run("cmd connectivity get-chain3-enabled").second.trim().take(60)
+        val chainNote = if (chain.first != 0 || chain.second.contains("Exception", true) || chain.second.contains("Unknown", true))
+            " (chain3 gagal: ${chain.second.trim().take(80)})" else " (chain3: $state)"
+        return if (firstErr.isNotEmpty()) "Gagal untuk sebagian aplikasi. Perintah mungkin tidak didukung di Android ini: $firstErr$chainNote"
         else if (desired.isEmpty()) "Semua aturan dibersihkan."
-        else "$okCount aplikasi diblokir lewat Shizuku."
+        else "$okCount aplikasi diblokir lewat Shizuku$chainNote. Aplikasi dihentikan paksa, buka lagi untuk menguji."
+    }
+
+    /** Laporan versi Android dan perintah firewall yang tersedia, untuk mencari perintah yang tepat. */
+    fun diagnose(cfg: Cfg): String {
+        if (Shell.state() != ShizukuState.READY) return "Shizuku belum aktif."
+        val sdk = Shell.run("getprop ro.build.version.sdk").second.trim()
+        val rel = Shell.run("getprop ro.build.version.release").second.trim()
+        val help = Shell.run("cmd connectivity help").second
+            .lines().filter { l -> listOf("chain", "firewall", "package", "background", "uid").any { l.contains(it, true) } }
+            .joinToString("\n") { it.trim().take(110) }.take(700)
+        val chain = Shell.run("cmd connectivity get-chain3-enabled").second.trim().take(80)
+        val pkg = Store.map(cfg.fwJson).keys.firstOrNull()
+        val get = if (pkg != null) Shell.run("cmd connectivity get-package-networking-enabled $pkg").second.trim().take(120) else "-"
+        return "Android $rel (SDK $sdk)\nchain3: $chain\n$pkg: $get\nPerintah tersedia:\n$help"
     }
 
     fun modeLabel(m: String?): String = when (m) {
@@ -351,6 +373,10 @@ fun FirewallCard(vm: MainVm) {
                 "Mode Shizuku tidak memakai VPN, tapi butuh Shizuku aktif dan hanya bisa blokir total (bukan per Wi-Fi atau data). Aturan perlu diterapkan ulang setelah HP restart.",
                 color = Pal.sub, fontSize = 12.sp
             )
+            ActionButton("Diagnosa", Modifier.fillMaxWidth()) {
+                vm.fwMsg = "Memeriksa..."
+                vm.viewModelScope.launch { vm.fwMsg = withContext(Dispatchers.IO) { Firewall.diagnose(cfg) } }
+            }
             if (vm.fwMsg.isNotEmpty()) Text(vm.fwMsg, color = Pal.soft, fontSize = 12.sp)
         } else {
             Text(
