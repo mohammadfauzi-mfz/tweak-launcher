@@ -1,7 +1,18 @@
 package com.fauzi.tweaklauncher
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.zip.ZipInputStream
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,6 +21,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -114,12 +127,116 @@ object IconPack {
     fun get(ctx: Context, name: String): ImageBitmap? {
         cache[name]?.let { return it }
         val bmp = try {
-            ctx.assets.open("icons/$name.png").use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
+            if (name.contains('/')) {
+                if (name.contains("..")) null
+                else BitmapFactory.decodeFile(File(packRoot(ctx), "$name.png").path)?.asImageBitmap()
+            } else {
+                ctx.assets.open("icons/$name.png").use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
+            }
         } catch (e: Exception) {
             null
         }
         if (bmp != null) cache[name] = bmp
         return bmp
+    }
+
+    // ---- Paket impor (zip)
+
+    private fun packRoot(ctx: Context) = File(ctx.filesDir, "iconpacks")
+
+    fun packs(ctx: Context): List<String> =
+        packRoot(ctx).listFiles()?.filter { it.isDirectory }?.map { it.name }?.sorted() ?: emptyList()
+
+    /** Nama ikon dalam satu paket impor, berbentuk "paket/nama". */
+    fun packNames(ctx: Context, pack: String): List<String> =
+        File(packRoot(ctx), pack).listFiles()?.filter { it.name.endsWith(".png") }
+            ?.map { "$pack/" + it.name.removeSuffix(".png") }?.sorted() ?: emptyList()
+
+    fun deletePack(ctx: Context, pack: String) {
+        if (pack.contains("..") || pack.contains('/')) return
+        File(packRoot(ctx), pack).deleteRecursively()
+        cache.keys.removeAll { it.startsWith("$pack/") }
+    }
+
+    fun displayName(ctx: Context, uri: Uri): String {
+        var n = ""
+        try {
+            ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                if (c.moveToFirst()) {
+                    val i = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (i >= 0) n = c.getString(i) ?: ""
+                }
+            }
+        } catch (e: Exception) {
+        }
+        return n
+    }
+
+    private fun clean(s: String) = s.replace(Regex("[^A-Za-z0-9_.-]"), "_").trim('.', '_').ifEmpty { "ikon" }
+
+    /** Impor .zip berisi PNG, WebP, atau JPG. Mengembalikan (nama paket, jumlah ikon) atau null jika gagal. */
+    fun importZip(ctx: Context, uri: Uri, fileName: String): Pair<String, Int>? {
+        val pack = clean(fileName.substringBeforeLast('.', fileName)).take(40)
+        val dir = File(packRoot(ctx), pack)
+        val tmp = File(packRoot(ctx), ".tmp_$pack")
+        tmp.deleteRecursively()
+        tmp.mkdirs()
+        // nama dasar -> (lebar terbesar)
+        val widths = HashMap<String, Int>()
+        var count = 0
+        try {
+            val ins = ctx.contentResolver.openInputStream(uri) ?: return null
+            ZipInputStream(ins.buffered()).use { z ->
+                while (true) {
+                    val e = z.nextEntry ?: break
+                    if (e.isDirectory) continue
+                    val path = e.name
+                    val base = path.substringAfterLast('/')
+                    if (path.startsWith("__MACOSX") || base.startsWith("._") || base.startsWith(".")) continue
+                    val ext = base.substringAfterLast('.', "").lowercase()
+                    if (ext != "png" && ext != "webp" && ext != "jpg" && ext != "jpeg") continue
+                    val bytes = z.readBytes()
+                    if (bytes.size > 2_000_000) continue
+                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: continue
+                    if (bmp.width > 512 || bmp.height > 512) continue
+                    // "nama-2" dan sejenisnya dianggap varian ukuran dari ikon yang sama
+                    val stem = base.substringBeforeLast('.')
+                    val name = clean(stem.replace(Regex("-\\d+$"), ""))
+                    val prev = widths[name]
+                    if (prev != null && prev >= bmp.width) continue
+                    if (prev == null && count >= 4000) continue
+                    if (prev == null) count++
+                    widths[name] = bmp.width
+                    File(tmp, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                }
+            }
+        } catch (e: Exception) {
+            tmp.deleteRecursively()
+            return null
+        }
+        if (widths.isEmpty()) {
+            tmp.deleteRecursively()
+            return null
+        }
+        dir.deleteRecursively()
+        tmp.renameTo(dir)
+        cache.keys.removeAll { it.startsWith("$pack/") }
+        return pack to widths.size
+    }
+
+    /** Tebak ikon dari nama berkas paket impor: kata nama aplikasi dicocokkan dengan nama berkas. */
+    fun guessIn(label: String, pkg: String, names: List<String>): String? {
+        val words = (label.lowercase().split(Regex("[^a-z0-9]+")) + pkg.lowercase().split('.'))
+            .filter { it.length >= 3 && it != "com" && it != "android" && it != "app" }
+        if (words.isEmpty()) return null
+        val flat = names.map { it to it.substringAfter('/').lowercase() }
+        for (w in words) {
+            flat.firstOrNull { it.second == w }?.let { return it.first }
+        }
+        for (w in words) {
+            flat.firstOrNull { it.second.contains(w) }?.let { return it.first }
+        }
+        return null
     }
 
     /** Cari nama ikon yang cocok untuk satu aplikasi, atau null jika tidak ada tebakan. */
@@ -150,13 +267,14 @@ fun MainVm.setIcon(t: IconTarget, name: String?) {
     if (t.sys) cfg.sysIconsJson = out else cfg.appIconsJson = out
 }
 
-fun MainVm.guessIcons(ctx: Context): Int {
+fun MainVm.guessIcons(ctx: Context, pack: String? = null): Int {
     val valid = IconPack.names(ctx).toSet()
+    val own = if (pack != null) IconPack.packNames(ctx, pack) else emptyList()
     val m = Store.map(cfg.appIconsJson)
     var n = 0
     apps.forEach { a ->
         if (a.pkg !in m) {
-            val g = IconPack.guess(a.label, a.pkg, valid)
+            val g = if (pack != null) IconPack.guessIn(a.label, a.pkg, own) else IconPack.guess(a.label, a.pkg, valid)
             if (g != null) {
                 m[a.pkg] = g
                 n++
@@ -165,6 +283,18 @@ fun MainVm.guessIcons(ctx: Context): Int {
     }
     cfg.appIconsJson = Store.mapJson(m)
     return n
+}
+
+fun MainVm.importIconPack(ctx: Context, uri: Uri) {
+    packMsg = "Mengimpor paket ikon..."
+    viewModelScope.launch {
+        val r = withContext(Dispatchers.IO) {
+            IconPack.importZip(ctx, uri, IconPack.displayName(ctx, uri).ifEmpty { "paket" })
+        }
+        packMsg = if (r == null) "Gagal: zip kosong atau tidak berisi gambar PNG, WebP, atau JPG (berkas .ico tidak bisa dibaca Android)."
+        else "Paket \"${r.first}\" masuk: ${r.second} ikon."
+        packRev++
+    }
 }
 
 fun MainVm.applyDefaultSys() {
@@ -178,15 +308,25 @@ fun IconPickerDialog(vm: MainVm) {
     val t = vm.iconPick ?: return
     val ctx = LocalContext.current
     var q by remember { mutableStateOf("") }
-    val all = remember { IconPack.names(ctx) }
+    val packs = remember(vm.packRev) { IconPack.packs(ctx) }
+    var sel by remember { mutableStateOf("") }
+    val all = remember(sel, vm.packRev) { if (sel.isEmpty()) IconPack.names(ctx) else IconPack.packNames(ctx, sel) }
     val key = q.trim().replace(' ', '_').lowercase()
-    val list = if (key.isEmpty()) all else all.filter { it.contains(key) }
+    val list = if (key.isEmpty()) all else all.filter { it.substringAfter('/').contains(key) }
     AlertDialog(
         onDismissRequest = { vm.iconPick = null },
         containerColor = Pal.card,
         title = { Text("Ikon: ${t.title}", color = Pal.text, fontSize = 17.sp) },
         text = {
             Column {
+                if (packs.isNotEmpty()) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("" to "Windows 98").plus(packs.map { it to it }).forEach { (id, lab) ->
+                            Pill(lab, sel == id) { sel = id }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
                 InputBox(q, { q = it }, "Cari ikon, mis. folder, computer, paint")
                 Spacer(Modifier.height(8.dp))
                 Text("${list.size} ikon", color = Pal.sub, fontSize = 11.sp)
@@ -217,7 +357,7 @@ fun IconPickerDialog(vm: MainVm) {
                                     )
                                 }
                                 Text(
-                                    n,
+                                    n.substringAfter('/'),
                                     color = Pal.sub,
                                     fontSize = 8.sp,
                                     maxLines = 2,
@@ -247,6 +387,8 @@ fun IconPackCard(vm: MainVm) {
     val cfg = vm.cfg
     val ctx = LocalContext.current
     var msg by remember { mutableStateOf("") }
+    val packs = remember(vm.packRev) { IconPack.packs(ctx) }
+    var guessPack by remember { mutableStateOf("") }
     SCard {
         Text("Paket ikon Windows 98", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Text(
@@ -254,8 +396,16 @@ fun IconPackCard(vm: MainVm) {
             color = Pal.sub, fontSize = 12.sp
         )
         SwitchRow("Ikon paket hitam putih", "Cocok untuk mode Mac OS klasik", cfg.packGray) { cfg.packGray = it }
+        if (packs.isNotEmpty()) {
+            Text("Paket untuk tebak otomatis", color = Pal.sub, fontSize = 12.sp)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("" to "Windows 98").plus(packs.map { it to it }).forEach { (id, lab) ->
+                    Pill(lab, guessPack == id) { guessPack = id }
+                }
+            }
+        }
         ActionButton("Tebak ikon otomatis untuk semua aplikasi", Modifier.fillMaxWidth(), primary = true) {
-            val n = vm.guessIcons(ctx)
+            val n = vm.guessIcons(ctx, guessPack.ifEmpty { null })
             msg = "$n aplikasi diberi ikon. Koreksi yang salah lewat tahan lama > Ikon."
         }
         ActionButton("Hapus semua ikon aplikasi kustom", Modifier.fillMaxWidth()) {
@@ -291,5 +441,44 @@ fun IconPackCard(vm: MainVm) {
         }
         ActionButton("Pakai pilihan Windows 98 yang disarankan", Modifier.fillMaxWidth(), primary = true) { vm.applyDefaultSys() }
         ActionButton("Kembalikan ikon sistem ke gambar bawaan", Modifier.fillMaxWidth()) { cfg.sysIconsJson = "{}" }
+    }
+}
+
+@Composable
+fun ImportPackCard(vm: MainVm) {
+    val ctx = LocalContext.current
+    val packs = remember(vm.packRev) { IconPack.packs(ctx) }
+    val zip = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.importIconPack(ctx, uri)
+    }
+    SCard {
+        Text("Impor paket ikon (.zip)", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Pilih berkas .zip berisi gambar PNG, WebP, atau JPG. Berkas .ico tidak bisa dibaca Android, ubah dulu ke PNG. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.",
+            color = Pal.sub, fontSize = 12.sp
+        )
+        ActionButton("Impor paket ikon (.zip)", Modifier.fillMaxWidth(), primary = true) {
+            zip.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream", "*/*"))
+        }
+        if (vm.packMsg.isNotEmpty()) Text(vm.packMsg, color = Pal.sub, fontSize = 12.sp)
+        packs.forEach { p ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(p, color = Pal.text, fontSize = 14.sp)
+                    Text("${IconPack.packNames(ctx, p).size} ikon", color = Pal.sub, fontSize = 11.sp)
+                }
+                TextButton(onClick = {
+                    IconPack.deletePack(ctx, p)
+                    // buang ikon kustom yang menunjuk ke paket ini
+                    for (isSys in listOf(false, true)) {
+                        val m = Store.map(if (isSys) vm.cfg.sysIconsJson else vm.cfg.appIconsJson)
+                        m.entries.removeAll { it.value.startsWith("$p/") }
+                        val out = Store.mapJson(m)
+                        if (isSys) vm.cfg.sysIconsJson = out else vm.cfg.appIconsJson = out
+                    }
+                    vm.packRev++
+                }) { Text("Hapus", color = Pal.accent) }
+            }
+        }
     }
 }

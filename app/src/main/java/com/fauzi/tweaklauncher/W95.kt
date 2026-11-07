@@ -90,7 +90,10 @@ internal fun w95Title(s: Screen) = when (s) {
 
 @Composable
 fun W95Frame(vm: MainVm) {
-    BackHandler(enabled = vm.w95Start) { vm.w95Start = false }
+    BackHandler(enabled = vm.w95Start || vm.clockOpen) {
+        vm.w95Start = false
+        vm.clockOpen = false
+    }
     // Jendela yang dibuka lewat gestur atau tombol lain tetap masuk ke taskbar.
     LaunchedEffect(vm.screen) {
         if (vm.screen != Screen.Home && vm.screen !in vm.w95Windows) vm.w95Windows.add(vm.screen)
@@ -104,6 +107,7 @@ fun W95Frame(vm: MainVm) {
             if (!imeOpen) W95Taskbar(vm)
         }
         if (vm.w95Start) W95StartMenu(vm)
+        if (vm.clockOpen) ClockPopup(vm, 0, TASKBAR_H)
     }
 }
 
@@ -197,15 +201,14 @@ private fun W95Shortcut(label: String, kind: Int, modifier: Modifier, onClick: (
 @Composable
 private fun W95Desktop(vm: MainVm) {
     val cfg = vm.cfg
-    val scroll = rememberScrollState()
-    val canUp = remember { booleanArrayOf(false) }
-    val canDown = remember { booleanArrayOf(false) }
-    val cols = cfg.homeCols.coerceIn(3, 6)
     val white = LocalPal.current.copy(text = Color.White, soft = Color.White, sub = Color.White)
+    val spec = cfg.wp95
+    val wp = rememberWallpaper(spec, "win95")
 
     Box(
         Modifier
             .fillMaxSize()
+            .wallpaperBg(spec, wp) { drawRect(Color(0xFF008080)) }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { vm.runGesture(cfg.gDouble) },
@@ -213,31 +216,33 @@ private fun W95Desktop(vm: MainVm) {
                 )
             }
             .swipes(
-                onStart = { canUp[0] = scroll.canScrollForward; canDown[0] = scroll.canScrollBackward },
                 onEnd = { d, _ ->
                     if (kotlin.math.abs(d.y) > kotlin.math.abs(d.x) * 1.5f) {
-                        if (d.y < -140f && !canUp[0]) vm.runGesture(cfg.gSwipeUp)
-                        else if (d.y > 140f && !canDown[0]) vm.runGesture(cfg.gSwipeDown)
+                        if (d.y < -140f) vm.runGesture(cfg.gSwipeUp)
+                        else if (d.y > 140f) vm.runGesture(cfg.gSwipeDown)
                     }
                 }
             )
     ) {
         CompositionLocalProvider(LocalPal provides white) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 10.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(Modifier.fillMaxWidth()) {
-                    W95Shortcut("Komputer Saya", 0, Modifier.weight(1f)) { vm.w95Open(Screen.Care) }
-                    W95Shortcut("Program", 1, Modifier.weight(1f)) { vm.w95Open(Screen.Drawer) }
-                    W95Shortcut("Panel Kontrol", 2, Modifier.weight(1f)) {
-                        vm.settingsPage = ""
-                        vm.w95Open(Screen.Settings)
+            Row(Modifier.fillMaxSize()) {
+                DesktopIcons(
+                    vm,
+                    listOf(
+                        DeskItem.Sys("Komputer Saya", 0) { vm.w95Open(Screen.Care) },
+                        DeskItem.Sys("Program", 1) { vm.w95Open(Screen.Drawer) },
+                        DeskItem.Sys("Panel Kontrol", 2) {
+                            vm.settingsPage = ""
+                            vm.w95Open(Screen.Settings)
+                        }
+                    ),
+                    Modifier.weight(1f).fillMaxHeight()
+                ) { l, k, m, c -> W95Shortcut(l, k, m, c) }
+                if (vm.widgetIds.isNotEmpty()) {
+                    Box(Modifier.width(190.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(8.dp)) {
+                        WidgetsBlock(vm)
                     }
-                    repeat(cols - 3) { Spacer(Modifier.weight(1f)) }
                 }
-                AppsGrid(vm)
-                if (vm.widgetIds.isNotEmpty()) WidgetsBlock(vm)
             }
         }
     }
@@ -358,6 +363,10 @@ private fun W95Taskbar(vm: MainVm) {
                     .fillMaxHeight()
                     .background(W95_GRAY)
                     .bevel(false)
+                    .clickable {
+                        vm.w95Start = false
+                        vm.clockOpen = !vm.clockOpen
+                    }
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.Center
             ) {

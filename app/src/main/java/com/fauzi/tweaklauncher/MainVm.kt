@@ -50,6 +50,9 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     var screen by mutableStateOf(Screen.Home)
     var pdaStart by mutableStateOf(false)
     var iconPick by mutableStateOf<IconTarget?>(null)
+    var clockOpen by mutableStateOf(false)
+    var packMsg by mutableStateOf("")
+    var packRev by mutableIntStateOf(0)
 
     // Grup dan tab daftar aplikasi (dipakai semua mode tampilan).
     var tabSel by mutableStateOf("all")

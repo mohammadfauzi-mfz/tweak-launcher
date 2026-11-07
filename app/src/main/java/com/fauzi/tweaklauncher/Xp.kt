@@ -71,7 +71,10 @@ private fun xpStartBrush() = Brush.verticalGradient(listOf(Color(0xFF5CB85C), Co
 
 @Composable
 fun XpFrame(vm: MainVm) {
-    BackHandler(enabled = vm.w95Start) { vm.w95Start = false }
+    BackHandler(enabled = vm.w95Start || vm.clockOpen) {
+        vm.w95Start = false
+        vm.clockOpen = false
+    }
     LaunchedEffect(vm.screen) {
         if (vm.screen != Screen.Home && vm.screen !in vm.w95Windows) vm.w95Windows.add(vm.screen)
     }
@@ -84,6 +87,7 @@ fun XpFrame(vm: MainVm) {
             if (!imeOpen) XpTaskbar(vm)
         }
         if (vm.w95Start) XpStartMenu(vm)
+        if (vm.clockOpen) ClockPopup(vm, 1, XP_BAR_H)
     }
 }
 
@@ -112,16 +116,14 @@ private fun XpShortcut(label: String, kind: Int, modifier: Modifier, onClick: ()
 @Composable
 private fun XpDesktop(vm: MainVm) {
     val cfg = vm.cfg
-    val scroll = rememberScrollState()
-    val canUp = remember { booleanArrayOf(false) }
-    val canDown = remember { booleanArrayOf(false) }
-    val cols = cfg.homeCols.coerceIn(3, 6)
     val white = LocalPal.current.copy(text = Color.White, soft = Color.White, sub = Color.White)
+    val spec = cfg.wpXp
+    val wp = rememberWallpaper(spec, "xp")
 
     Box(
         Modifier
             .fillMaxSize()
-            .drawBehind {
+            .wallpaperBg(spec, wp) {
                 drawRect(
                     Brush.verticalGradient(
                         listOf(Color(0xFF2B6FDC), Color(0xFF9CCBF5)),
@@ -142,31 +144,33 @@ private fun XpDesktop(vm: MainVm) {
                 )
             }
             .swipes(
-                onStart = { canUp[0] = scroll.canScrollForward; canDown[0] = scroll.canScrollBackward },
                 onEnd = { d, _ ->
                     if (kotlin.math.abs(d.y) > kotlin.math.abs(d.x) * 1.5f) {
-                        if (d.y < -140f && !canUp[0]) vm.runGesture(cfg.gSwipeUp)
-                        else if (d.y > 140f && !canDown[0]) vm.runGesture(cfg.gSwipeDown)
+                        if (d.y < -140f) vm.runGesture(cfg.gSwipeUp)
+                        else if (d.y > 140f) vm.runGesture(cfg.gSwipeDown)
                     }
                 }
             )
     ) {
         CompositionLocalProvider(LocalPal provides white) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 10.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(Modifier.fillMaxWidth()) {
-                    XpShortcut("Komputer Saya", 0, Modifier.weight(1f)) { vm.w95Open(Screen.Care) }
-                    XpShortcut("Program", 1, Modifier.weight(1f)) { vm.w95Open(Screen.Drawer) }
-                    XpShortcut("Panel Kontrol", 2, Modifier.weight(1f)) {
-                        vm.settingsPage = ""
-                        vm.w95Open(Screen.Settings)
+            Row(Modifier.fillMaxSize()) {
+                DesktopIcons(
+                    vm,
+                    listOf(
+                        DeskItem.Sys("Komputer Saya", 0) { vm.w95Open(Screen.Care) },
+                        DeskItem.Sys("Program", 1) { vm.w95Open(Screen.Drawer) },
+                        DeskItem.Sys("Panel Kontrol", 2) {
+                            vm.settingsPage = ""
+                            vm.w95Open(Screen.Settings)
+                        }
+                    ),
+                    Modifier.weight(1f).fillMaxHeight()
+                ) { l, k, m, c -> XpShortcut(l, k, m, c) }
+                if (vm.widgetIds.isNotEmpty()) {
+                    Box(Modifier.width(190.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(8.dp)) {
+                        WidgetsBlock(vm)
                     }
-                    repeat(cols - 3) { Spacer(Modifier.weight(1f)) }
                 }
-                AppsGrid(vm)
-                if (vm.widgetIds.isNotEmpty()) WidgetsBlock(vm)
             }
         }
     }
@@ -319,6 +323,10 @@ private fun XpTaskbar(vm: MainVm) {
             Modifier
                 .fillMaxHeight()
                 .background(Color(0xFF0F8CE8))
+                .clickable {
+                    vm.w95Start = false
+                    vm.clockOpen = !vm.clockOpen
+                }
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center
         ) {

@@ -243,10 +243,6 @@ private fun MacShortcut(label: String, kind: Int, modifier: Modifier, onClick: (
 @Composable
 private fun MacDesktop(vm: MainVm) {
     val cfg = vm.cfg
-    val scroll = rememberScrollState()
-    val canUp = remember { booleanArrayOf(false) }
-    val canDown = remember { booleanArrayOf(false) }
-    val cols = cfg.homeCols.coerceIn(3, 6)
     // Label ikon di desktop: teks hitam di atas kotak putih, seperti Finder lama.
     val labelPal = LocalPal.current.copy(text = Color.Black, soft = Color.Black, sub = Color.Black)
 
@@ -269,31 +265,33 @@ private fun MacDesktop(vm: MainVm) {
                 )
             }
             .swipes(
-                onStart = { canUp[0] = scroll.canScrollForward; canDown[0] = scroll.canScrollBackward },
                 onEnd = { d, _ ->
                     if (kotlin.math.abs(d.y) > kotlin.math.abs(d.x) * 1.5f) {
-                        if (d.y < -140f && !canUp[0]) vm.runGesture(cfg.gSwipeUp)
-                        else if (d.y > 140f && !canDown[0]) vm.runGesture(cfg.gSwipeDown)
+                        if (d.y < -140f) vm.runGesture(cfg.gSwipeUp)
+                        else if (d.y > 140f) vm.runGesture(cfg.gSwipeDown)
                     }
                 }
             )
     ) {
         CompositionLocalProvider(LocalPal provides labelPal) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 10.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(Modifier.fillMaxWidth()) {
-                    MacShortcut("Macintosh HD", 0, Modifier.weight(1f)) { vm.screen = Screen.Care }
-                    MacShortcut("Program", 1, Modifier.weight(1f)) { vm.screen = Screen.Drawer }
-                    MacShortcut("Panel Kontrol", 2, Modifier.weight(1f)) {
-                        vm.settingsPage = ""
-                        vm.screen = Screen.Settings
+            Row(Modifier.fillMaxSize()) {
+                DesktopIcons(
+                    vm,
+                    listOf(
+                        DeskItem.Sys("Macintosh HD", 0) { vm.screen = Screen.Care },
+                        DeskItem.Sys("Program", 1) { vm.screen = Screen.Drawer },
+                        DeskItem.Sys("Panel Kontrol", 2) {
+                            vm.settingsPage = ""
+                            vm.screen = Screen.Settings
+                        }
+                    ),
+                    Modifier.weight(1f).fillMaxHeight()
+                ) { l, k, mod, c -> MacShortcut(l, k, mod, c) }
+                if (vm.widgetIds.isNotEmpty()) {
+                    Box(Modifier.width(190.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(8.dp)) {
+                        WidgetsBlock(vm)
                     }
-                    repeat(cols - 3) { Spacer(Modifier.weight(1f)) }
                 }
-                AppsGrid(vm)
-                if (vm.widgetIds.isNotEmpty()) WidgetsBlock(vm)
             }
         }
     }

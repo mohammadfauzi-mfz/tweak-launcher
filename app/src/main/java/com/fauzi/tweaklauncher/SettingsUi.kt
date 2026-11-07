@@ -155,6 +155,7 @@ private fun AppearancePage(vm: MainVm) {
             Text("Di mode ini, tema warna, aksen, font, dan latar diabaikan. Kembali ke Modern untuk memakainya lagi.", color = Pal.sub, fontSize = 12.sp)
         }
     }
+    WallpaperCard(vm)
     SCard {
         ChoiceRow(
             "Tema siap pakai",
@@ -316,6 +317,7 @@ private fun IconsPage(vm: MainVm) {
         SwitchRow("Tampilkan aplikasi tersembunyi", "Di tab Semua", cfg.showHidden) { cfg.showHidden = it }
     }
     IconPackCard(vm)
+    ImportPackCard(vm)
 }
 
 // ---------------------------------------------------------------- Gestur
