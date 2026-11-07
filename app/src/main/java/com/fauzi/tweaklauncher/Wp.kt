@@ -47,6 +47,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -607,7 +608,7 @@ private fun WpApps(vm: MainVm) {
         }
         if (jump) {
             // Papan lompat huruf: huruf yang ada berwarna aksen, yang tidak ada redup.
-            val letters = ('A'..'Z').toList() + '#'
+            val letters: List<Char> = ('A'..'Z').toList() + listOf('#')
             Box(
                 Modifier
                     .fillMaxSize()
@@ -621,7 +622,7 @@ private fun WpApps(vm: MainVm) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(letters) { c ->
+                    gridItems(letters) { c: Char ->
                         val has = headIdx.containsKey(c)
                         Box(
                             Modifier
