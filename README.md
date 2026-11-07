@@ -35,6 +35,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Windows XP menyamai 95: menu Start dengan "Semua Program" berikon, menu tahan-lama XP (pindah dan susun ikon), dialog bergaya XP, tray dengan Wi-Fi, speaker, dan baterai.
 - Mode Windows Phone: layar Start berisi ubin (kecil, sedang, lebar) dengan warna aksen, geser kiri ke daftar aplikasi alfabetis, tahan lama ubin untuk mengedit (lepas, ubah ukuran, pindah).
 - Mode Symbian (Nokia S60): layar siaga dengan jam dan bilah pintasan, menu grid 3 kolom, softkey Pilihan/Keluar, menu Pilihan, dialog bergaya S60, wallpaper bisa diganti.
+- Windows Phone lebih dekat ke aslinya: ubin berputar (live tile) untuk notifikasi dan baterai, efek miring saat ditekan, seret setelah tahan lama, ikon siluet putih, papan lompat huruf, halaman gaya pivot, tema gelap atau terang.
 - Impor paket ikon (.zip PNG/WebP/JPG) di Setelan > Ikon, tampil di galeri, bisa dihapus dan dipakai tebak otomatis.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.

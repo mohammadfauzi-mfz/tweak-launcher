@@ -63,7 +63,7 @@ fun SettingsScreen(vm: MainVm) {
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         if (page.isEmpty()) {
-            Text("Setelan", color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            if (LocalCfg.current.uiMode != "wp") Text("Setelan", color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             PAGES.forEach { (key, title, sub) ->
                 SCard(Modifier.clickable { vm.settingsPage = key }) {
                     Text(title, color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)

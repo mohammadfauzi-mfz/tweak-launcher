@@ -105,6 +105,7 @@ class Cfg(ctx: Context) {
     var fwAppliedCsv by s("fwApplied", "")
     var fwJson by s("fwJ", "{}")
     var wpAccent by s("wpAccent", "1BA1E2")
+    var wpLight by s("wpLight", false)
     var wpOrder by s("wpOrder", "")
     var wpSizes by s("wpSizes", "{}")
     var wpSym by s("wpSym", "")

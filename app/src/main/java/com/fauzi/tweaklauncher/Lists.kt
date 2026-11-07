@@ -102,7 +102,7 @@ fun CareScreen(vm: MainVm) {
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Column {
-            Text("Perawatan", color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            if (LocalCfg.current.uiMode != "wp") Text("Perawatan", color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Text("Profil aktif: ${vm.profile.label}", color = Pal.sub, fontSize = 14.sp)
         }
 

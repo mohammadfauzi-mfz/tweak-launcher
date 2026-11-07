@@ -148,7 +148,7 @@ object Pal {
 @Composable
 fun TweakTheme(cfg: Cfg, content: @Composable () -> Unit) {
     val pda = cfg.uiMode == "pda"
-    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette().copy(wallpaper = cfg.wp95 == "system") else if (cfg.uiMode == "xp") xpPalette().copy(wallpaper = cfg.wpXp == "system") else if (cfg.uiMode == "dos") dosPalette(cfg.dosColor) else if (cfg.uiMode == "mac") macPalette() else if (cfg.uiMode == "wp") wpPalette(cfg.wpAccent) else if (cfg.uiMode == "sym") symPalette().copy(wallpaper = cfg.wpSym == "system") else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
+    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette().copy(wallpaper = cfg.wp95 == "system") else if (cfg.uiMode == "xp") xpPalette().copy(wallpaper = cfg.wpXp == "system") else if (cfg.uiMode == "dos") dosPalette(cfg.dosColor) else if (cfg.uiMode == "mac") macPalette() else if (cfg.uiMode == "wp") wpPalette(cfg.wpAccent, cfg.wpLight) else if (cfg.uiMode == "sym") symPalette().copy(wallpaper = cfg.wpSym == "system") else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
     val ff = if (pda || cfg.uiMode == "dos") FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp" || cfg.uiMode == "mac" || cfg.uiMode == "wp" || cfg.uiMode == "sym") FontFamily.SansSerif else when (cfg.font) {
         "serif" -> FontFamily.Serif
         "mono" -> FontFamily.Monospace
