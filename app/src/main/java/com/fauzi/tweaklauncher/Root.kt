@@ -114,6 +114,7 @@ fun Root(vm: MainVm) {
         WidgetPickerDialog(vm, addWidget)
         GroupDialogs(vm)
         IconPickerDialog(vm)
+        FirewallDialog(vm)
         UpdateDialog(vm)
         RevertDialog(vm)
     }

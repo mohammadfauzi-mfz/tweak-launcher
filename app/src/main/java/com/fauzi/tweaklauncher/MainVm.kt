@@ -51,6 +51,7 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     var pdaStart by mutableStateOf(false)
     var iconPick by mutableStateOf<IconTarget?>(null)
     var clockOpen by mutableStateOf(false)
+    var fwOpen by mutableStateOf(false)
     var trayPop by mutableStateOf("")
     var deskMove by mutableStateOf<String?>(null)
     var packMsg by mutableStateOf("")

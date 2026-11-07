@@ -95,6 +95,8 @@ class Cfg(ctx: Context) {
     var appIconsJson by s("appIconsJ", "{}")
     var sysIconsJson by s("sysIconsJ", "{}")
     var packGray by s("packGray", false)
+    var fwOn by s("fwOn", false)
+    var fwJson by s("fwJ", "{}")
     var wp95 by s("wp95", "")
     var deskOrder by s("deskOrder", "")
     var wpXp by s("wpXp", "")
