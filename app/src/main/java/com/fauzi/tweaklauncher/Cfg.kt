@@ -96,6 +96,8 @@ class Cfg(ctx: Context) {
     var sysIconsJson by s("sysIconsJ", "{}")
     var packGray by s("packGray", false)
     var fwOn by s("fwOn", false)
+    var fwEngine by s("fwEngine", "vpn")
+    var fwAppliedCsv by s("fwApplied", "")
     var fwJson by s("fwJ", "{}")
     var wp95 by s("wp95", "")
     var deskOrder by s("deskOrder", "")

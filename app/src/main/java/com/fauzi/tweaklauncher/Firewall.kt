@@ -12,6 +12,10 @@ import android.net.VpnService
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -100,7 +104,8 @@ class FirewallService : VpnService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!Cfg(this).fwOn) {
+        val c0 = Cfg(this)
+        if (!c0.fwOn || c0.fwEngine != "vpn") {
             closeTun()
             stopSelf()
             return START_NOT_STICKY
@@ -111,7 +116,7 @@ class FirewallService : VpnService() {
 
     private fun rebuild() {
         val cfg = Cfg(this)
-        if (!cfg.fwOn) {
+        if (!cfg.fwOn || cfg.fwEngine != "vpn") {
             closeTun()
             return
         }
@@ -221,7 +226,32 @@ object Firewall {
 
     /** Dipanggil saat launcher dibuka: nyalakan ulang VPN jika sebelumnya aktif dan izinnya masih ada. */
     fun sync(ctx: Context, cfg: Cfg) {
+        if (cfg.fwEngine != "vpn") return
         if (cfg.fwOn && VpnService.prepare(ctx) == null) start(ctx) else if (cfg.fwOn) cfg.fwOn = false
+    }
+
+    /**
+     * Mode Shizuku: aktifkan atau matikan jaringan per paket lewat perintah sistem (tanpa VPN).
+     * Mengembalikan pesan hasil untuk ditampilkan.
+     */
+    fun applyShizuku(cfg: Cfg): String {
+        if (Shell.state() != ShizukuState.READY) return "Shizuku belum aktif, aturan belum diterapkan."
+        val desired = if (cfg.fwOn) Store.map(cfg.fwJson).keys.toSet() else emptySet()
+        val applied = Sys.list(cfg.fwAppliedCsv).toSet()
+        var firstErr = ""
+        var okCount = 0
+        for (p in applied - desired) {
+            Shell.run("cmd connectivity set-package-networking-enabled true $p")
+        }
+        for (p in desired) {
+            val r = Shell.run("cmd connectivity set-package-networking-enabled false $p")
+            if (r.first == 0 && !r.second.contains("Exception", true) && !r.second.contains("Unknown", true)) okCount++
+            else if (firstErr.isEmpty()) firstErr = r.second.trim().take(140)
+        }
+        cfg.fwAppliedCsv = Sys.join(desired)
+        return if (firstErr.isNotEmpty()) "Gagal untuk sebagian aplikasi. Perintah ini mungkin tidak didukung di versi Android ini: $firstErr"
+        else if (desired.isEmpty()) "Semua aturan dibersihkan."
+        else "$okCount aplikasi diblokir lewat Shizuku."
     }
 
     fun modeLabel(m: String?): String = when (m) {
@@ -231,9 +261,9 @@ object Firewall {
         else -> "Diizinkan"
     }
 
-    fun nextMode(m: String?): String? = when (m) {
+    fun nextMode(m: String?, shizuku: Boolean = false): String? = when (m) {
         null, "" -> "all"
-        "all" -> "wifi"
+        "all" -> if (shizuku) null else "wifi"
         "wifi" -> "mobile"
         else -> null
     }
@@ -243,7 +273,17 @@ fun MainVm.setFwMode(ctx: Context, pkg: String, mode: String?) {
     val m = Store.map(cfg.fwJson)
     if (mode == null) m.remove(pkg) else m[pkg] = mode
     cfg.fwJson = Store.mapJson(m)
-    if (cfg.fwOn) Firewall.start(ctx)
+    fwRefresh(ctx)
+}
+
+/** Terapkan ulang aturan sesuai cara kerja yang dipilih (VPN lokal atau Shizuku). */
+fun MainVm.fwRefresh(ctx: Context) {
+    if (cfg.fwEngine == "shizuku") {
+        Firewall.stop(ctx)
+        viewModelScope.launch { fwMsg = withContext(Dispatchers.IO) { Firewall.applyShizuku(cfg) } }
+    } else {
+        if (cfg.fwOn) Firewall.start(ctx) else Firewall.stop(ctx)
+    }
 }
 
 @Composable
@@ -263,12 +303,38 @@ fun FirewallCard(vm: MainVm) {
             "Pilih aplikasi yang tidak boleh memakai internet, semuanya, hanya Wi-Fi, atau hanya data seluler. Memakai VPN lokal di HP, datamu tidak dikirim ke mana pun.",
             color = Pal.soft, fontSize = 13.sp
         )
+        ChoiceRow(
+            "Cara kerja",
+            listOf("vpn" to "VPN lokal", "shizuku" to "Shizuku (tanpa VPN)"),
+            cfg.fwEngine
+        ) { e ->
+            if (e != cfg.fwEngine) {
+                val wasShizuku = cfg.fwEngine == "shizuku"
+                cfg.fwEngine = e
+                if (wasShizuku) {
+                    // bersihkan aturan Shizuku lama sebelum pindah ke VPN
+                    val on = cfg.fwOn
+                    cfg.fwOn = false
+                    vm.fwRefresh(ctx)
+                    cfg.fwOn = on
+                    if (on) {
+                        if (VpnService.prepare(ctx) == null) Firewall.start(ctx) else cfg.fwOn = false
+                    }
+                } else {
+                    Firewall.stop(ctx)
+                    vm.fwRefresh(ctx)
+                }
+            }
+        }
         SwitchRow(
             "Firewall aktif",
             if (count == 0) "Belum ada aplikasi diblokir" else "$count aplikasi diatur",
             cfg.fwOn
         ) { on ->
-            if (on) {
+            if (cfg.fwEngine == "shizuku") {
+                cfg.fwOn = on
+                vm.fwRefresh(ctx)
+            } else if (on) {
                 val i = VpnService.prepare(ctx)
                 if (i != null) launcher.launch(i) else {
                     cfg.fwOn = true
@@ -280,10 +346,18 @@ fun FirewallCard(vm: MainVm) {
             }
         }
         ActionButton("Atur aplikasi...", Modifier.fillMaxWidth(), primary = true) { vm.fwOpen = true }
-        Text(
-            "Android hanya mengizinkan satu VPN aktif. Jika kamu memakai VPN lain (mis. 1.1.1.1), salah satunya akan mati.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        if (cfg.fwEngine == "shizuku") {
+            Text(
+                "Mode Shizuku tidak memakai VPN, tapi butuh Shizuku aktif dan hanya bisa blokir total (bukan per Wi-Fi atau data). Aturan perlu diterapkan ulang setelah HP restart.",
+                color = Pal.sub, fontSize = 12.sp
+            )
+            if (vm.fwMsg.isNotEmpty()) Text(vm.fwMsg, color = Pal.soft, fontSize = 12.sp)
+        } else {
+            Text(
+                "Android hanya mengizinkan satu VPN aktif. Jika kamu memakai VPN lain (mis. 1.1.1.1), salah satunya akan mati.",
+                color = Pal.sub, fontSize = 12.sp
+            )
+        }
     }
 }
 
@@ -319,11 +393,11 @@ fun FirewallDialog(vm: MainVm) {
                         val m = Store.map(cfg.fwJson)
                         vm.apps.filter { !it.system && it.pkg != ctx.packageName }.forEach { m[it.pkg] = "all" }
                         cfg.fwJson = Store.mapJson(m)
-                        if (cfg.fwOn) Firewall.start(ctx)
+                        vm.fwRefresh(ctx)
                     })
                     Text("Bebaskan semua", color = Pal.accent, fontSize = 12.sp, modifier = Modifier.clickable {
                         cfg.fwJson = "{}"
-                        if (cfg.fwOn) Firewall.start(ctx)
+                        vm.fwRefresh(ctx)
                     })
                 }
                 Spacer(Modifier.height(6.dp))
@@ -334,7 +408,7 @@ fun FirewallDialog(vm: MainVm) {
                             Row(
                                 Modifier
                                     .fillMaxWidth()
-                                    .clickable { vm.setFwMode(ctx, a.pkg, Firewall.nextMode(mode)) }
+                                    .clickable { vm.setFwMode(ctx, a.pkg, Firewall.nextMode(mode, cfg.fwEngine == "shizuku")) }
                                     .padding(vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -354,7 +428,11 @@ fun FirewallDialog(vm: MainVm) {
                         }
                     }
                 }
-                Text("Ketuk aplikasi untuk mengganti: Diizinkan, Diblokir, Blokir Wi-Fi, Blokir data seluler.", color = Pal.sub, fontSize = 11.sp)
+                Text(
+                    if (cfg.fwEngine == "shizuku") "Ketuk aplikasi untuk mengganti: Diizinkan atau Diblokir."
+                    else "Ketuk aplikasi untuk mengganti: Diizinkan, Diblokir, Blokir Wi-Fi, Blokir data seluler.",
+                    color = Pal.sub, fontSize = 11.sp
+                )
             }
         },
         confirmButton = { DlgButton(onClick = { vm.fwOpen = false }) { Text("Tutup", color = Pal.accent) } }
