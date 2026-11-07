@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,7 +72,7 @@ fun AppMenu(vm: MainVm) {
         return
     }
 
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { close() },
         containerColor = Pal.card,
         title = { Text(a.label, color = Pal.text) },
@@ -84,7 +82,7 @@ fun AppMenu(vm: MainVm) {
             }
         },
         confirmButton = {
-            TextButton(onClick = { close() }) { Text("Tutup", color = Pal.accent) }
+            DlgButton(onClick = { close() }) { Text("Tutup", color = Pal.accent) }
         }
     )
 }
@@ -94,7 +92,7 @@ fun FolderPickDialog(vm: MainVm) {
     val a = vm.folderPickApp ?: return
     var name by remember { mutableStateOf("") }
     val folders = vm.folders
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.folderPickApp = null },
         containerColor = Pal.card,
         title = { Text("Folder untuk ${a.label}", color = Pal.text) },
@@ -115,7 +113,7 @@ fun FolderPickDialog(vm: MainVm) {
             }
         },
         confirmButton = {
-            TextButton(onClick = { vm.folderPickApp = null }) { Text("Batal", color = Pal.accent) }
+            DlgButton(onClick = { vm.folderPickApp = null }) { Text("Batal", color = Pal.accent) }
         }
     )
 }
@@ -124,7 +122,7 @@ fun FolderPickDialog(vm: MainVm) {
 fun ProfilePickDialog(vm: MainVm) {
     val a = vm.profilePickApp ?: return
     val current = Store.map(vm.cfg.appProfilesJson)[a.pkg]
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.profilePickApp = null },
         containerColor = Pal.card,
         title = { Text("Profil untuk ${a.label}", color = Pal.text) },
@@ -147,7 +145,7 @@ fun ProfilePickDialog(vm: MainVm) {
             }
         },
         confirmButton = {
-            TextButton(onClick = { vm.profilePickApp = null }) { Text("Tutup", color = Pal.accent) }
+            DlgButton(onClick = { vm.profilePickApp = null }) { Text("Tutup", color = Pal.accent) }
         }
     )
 }
@@ -157,7 +155,7 @@ fun FolderDialog(vm: MainVm) {
     val name = vm.openFolder ?: return
     val byPkg = vm.apps.associateBy { it.pkg }
     val members = (vm.folders[name] ?: emptyList()).mapNotNull { byPkg[it] }
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.openFolder = null },
         containerColor = Pal.card,
         title = { Text(name, color = Pal.text) },
@@ -181,7 +179,7 @@ fun FolderDialog(vm: MainVm) {
             }
         },
         confirmButton = {
-            TextButton(onClick = { vm.openFolder = null }) { Text("Tutup", color = Pal.accent) }
+            DlgButton(onClick = { vm.openFolder = null }) { Text("Tutup", color = Pal.accent) }
         }
     )
 }
@@ -190,7 +188,7 @@ fun FolderDialog(vm: MainVm) {
 fun UpdateDialog(vm: MainVm) {
     val u = vm.update ?: return
     if (!vm.showUpdate) return
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { if (!vm.downloading) vm.dismissUpdate() },
         containerColor = Pal.card,
         title = { Text("Pembaruan tersedia", color = Pal.text) },
@@ -211,10 +209,10 @@ fun UpdateDialog(vm: MainVm) {
             }
         },
         dismissButton = {
-            TextButton(enabled = !vm.downloading, onClick = { vm.dismissUpdate() }) { Text("Nanti", color = Pal.sub) }
+            DlgButton(enabled = !vm.downloading, onClick = { vm.dismissUpdate() }) { Text("Nanti", color = Pal.sub) }
         },
         confirmButton = {
-            TextButton(
+            DlgButton(
                 enabled = !vm.downloading,
                 onClick = { if (vm.downloaded != null) vm.installUpdate() else vm.downloadUpdate() }
             ) {
@@ -227,7 +225,7 @@ fun UpdateDialog(vm: MainVm) {
 @Composable
 fun RevertDialog(vm: MainVm) {
     val r = vm.revert ?: return
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { },
         containerColor = Pal.card,
         title = { Text("Pertahankan ${r.label}?", color = Pal.text) },
@@ -238,10 +236,10 @@ fun RevertDialog(vm: MainVm) {
             )
         },
         dismissButton = {
-            TextButton(onClick = { vm.revertDisplay() }) { Text("Kembalikan", color = Red) }
+            DlgButton(onClick = { vm.revertDisplay() }) { Text("Kembalikan", color = Red) }
         },
         confirmButton = {
-            TextButton(onClick = { vm.keepDisplay() }) { Text("Pertahankan", color = Pal.accent) }
+            DlgButton(onClick = { vm.keepDisplay() }) { Text("Pertahankan", color = Pal.accent) }
         }
     )
 }

@@ -30,9 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -313,7 +311,7 @@ fun IconPickerDialog(vm: MainVm) {
     val all = remember(sel, vm.packRev) { if (sel.isEmpty()) IconPack.names(ctx) else IconPack.packNames(ctx, sel) }
     val key = q.trim().replace(' ', '_').lowercase()
     val list = if (key.isEmpty()) all else all.filter { it.substringAfter('/').contains(key) }
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.iconPick = null },
         containerColor = Pal.card,
         title = { Text("Ikon: ${t.title}", color = Pal.text, fontSize = 17.sp) },
@@ -370,9 +368,9 @@ fun IconPickerDialog(vm: MainVm) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { vm.iconPick = null }) { Text("Tutup", color = Pal.accent) } },
+        confirmButton = { DlgButton(onClick = { vm.iconPick = null }) { Text("Tutup", color = Pal.accent) } },
         dismissButton = {
-            TextButton(onClick = {
+            DlgButton(onClick = {
                 vm.setIcon(t, null)
                 vm.iconPick = null
             }) { Text("Kembalikan asli", color = Pal.accent) }
@@ -467,7 +465,7 @@ fun ImportPackCard(vm: MainVm) {
                     Text(p, color = Pal.text, fontSize = 14.sp)
                     Text("${IconPack.packNames(ctx, p).size} ikon", color = Pal.sub, fontSize = 11.sp)
                 }
-                TextButton(onClick = {
+                DlgButton(onClick = {
                     IconPack.deletePack(ctx, p)
                     // buang ikon kustom yang menunjuk ke paket ini
                     for (isSys in listOf(false, true)) {

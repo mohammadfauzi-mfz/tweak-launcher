@@ -17,9 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -131,7 +129,7 @@ fun WidgetPickerDialog(vm: MainVm, onPick: (AppWidgetProviderInfo) -> Unit) {
             .map { Pair(it, it.loadLabel(pm)) }
             .sortedBy { it.second.lowercase() }
     }
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.showWidgetPicker = false },
         containerColor = Pal.card,
         title = { Text("Pilih widget", color = Pal.text) },
@@ -159,7 +157,7 @@ fun WidgetPickerDialog(vm: MainVm, onPick: (AppWidgetProviderInfo) -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = { vm.showWidgetPicker = false }) { Text("Batal", color = Pal.accent) }
+            DlgButton(onClick = { vm.showWidgetPicker = false }) { Text("Batal", color = Pal.accent) }
         }
     )
 }

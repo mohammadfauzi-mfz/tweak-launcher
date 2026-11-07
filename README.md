@@ -27,6 +27,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Mode Windows 95/XP: ketuk jam di taskbar untuk popup kalender dan jam; wallpaper bisa diganti (warna, foto, wallpaper HP) per mode; ikon desktop tersusun di kiri. Mac OS klasik juga memakai ikon di kiri.
 - Menu Start Windows 95 mirip aslinya: pita "Windows 95" di kiri, ikon besar, submenu Program berisi semua aplikasi dengan ikonnya.
 - Windows 95: menu tahan-lama bergaya klasik (Pindahkan ikon, Susun ikon nama/bawaan, posisi tersimpan); tray punya ikon Wi-Fi (status, nyalakan/matikan via Shizuku), speaker (slider volume, bisukan), dan ikon baterai.
+- Mode Windows 95: semua dialog (folder, pembaruan, grup, ikon, dan lainnya) tampil sebagai jendela klasik dengan title bar biru dan tombol timbul.
 - Impor paket ikon (.zip PNG/WebP/JPG) di Setelan > Ikon, tampil di galeri, bisa dihapus dan dipakai tebak otomatis.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.

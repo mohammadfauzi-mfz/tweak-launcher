@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -238,7 +236,7 @@ private fun NewGroupDialog(vm: MainVm) {
     if (!vm.groupNewOpen) return
     var name by remember { mutableStateOf("") }
     var err by remember { mutableStateOf("") }
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.groupNewOpen = false },
         containerColor = Pal.card,
         title = { Text("Grup baru", color = Pal.text) },
@@ -262,7 +260,7 @@ private fun NewGroupDialog(vm: MainVm) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { vm.groupNewOpen = false }) { Text("Batal", color = Pal.accent) } }
+        confirmButton = { DlgButton(onClick = { vm.groupNewOpen = false }) { Text("Batal", color = Pal.accent) } }
     )
 }
 
@@ -279,7 +277,7 @@ private fun TabMenuDialog(vm: MainVm) {
     var err by remember(id) { mutableStateOf("") }
     val hidden = id in Sys.list(vm.cfg.tabHiddenCsv)
     val name = id.removePrefix("g:")
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.tabMenu = null },
         containerColor = Pal.card,
         title = { Text(tab.label, color = Pal.text) },
@@ -318,7 +316,7 @@ private fun TabMenuDialog(vm: MainVm) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { vm.tabMenu = null }) { Text("Tutup", color = Pal.accent) } }
+        confirmButton = { DlgButton(onClick = { vm.tabMenu = null }) { Text("Tutup", color = Pal.accent) } }
     )
 }
 
@@ -330,7 +328,7 @@ private fun GroupAppsDialog(vm: MainVm) {
         vm.groupEditName = null
         return
     }
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.groupEditName = null },
         containerColor = Pal.card,
         title = { Text("Aplikasi di grup $name", color = Pal.text) },
@@ -341,7 +339,7 @@ private fun GroupAppsDialog(vm: MainVm) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { vm.groupEditName = null }) { Text("Selesai", color = Pal.accent) } }
+        confirmButton = { DlgButton(onClick = { vm.groupEditName = null }) { Text("Selesai", color = Pal.accent) } }
     )
 }
 
@@ -351,7 +349,7 @@ private fun GroupPickDialog(vm: MainVm) {
     val a = vm.groupPickApp ?: return
     var name by remember { mutableStateOf("") }
     val groups = vm.groups
-    AlertDialog(
+    TweakDialog(
         onDismissRequest = { vm.groupPickApp = null },
         containerColor = Pal.card,
         title = { Text("Grup untuk ${a.label}", color = Pal.text) },
@@ -374,6 +372,6 @@ private fun GroupPickDialog(vm: MainVm) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { vm.groupPickApp = null }) { Text("Selesai", color = Pal.accent) } }
+        confirmButton = { DlgButton(onClick = { vm.groupPickApp = null }) { Text("Selesai", color = Pal.accent) } }
     )
 }
