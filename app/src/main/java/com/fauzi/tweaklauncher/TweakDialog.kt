@@ -45,7 +45,7 @@ fun TweakDialog(
     dismissButton: (@Composable () -> Unit)? = null
 ) {
     val mode = LocalCfg.current.uiMode
-    if (mode != "win95" && mode != "xp" && mode != "wp") {
+    if (mode != "win95" && mode != "xp" && mode != "wp" && mode != "sym") {
         AlertDialog(
             onDismissRequest = onDismissRequest,
             containerColor = containerColor,
@@ -54,6 +54,29 @@ fun TweakDialog(
             confirmButton = confirmButton,
             dismissButton = dismissButton
         )
+        return
+    }
+    if (mode == "sym") {
+        Dialog(onDismissRequest = onDismissRequest, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .border(2.dp, Color(0xFF3E5E8F), RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White)
+                ) {
+                    Box(Modifier.fillMaxWidth().background(symTitleBrush()).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        if (title != null) title()
+                    }
+                    Column(Modifier.fillMaxWidth().padding(14.dp)) { if (text != null) text() }
+                    Row(Modifier.fillMaxWidth().background(symDarkBrush()), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { confirmButton() }
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { if (dismissButton != null) dismissButton() }
+                    }
+                }
+            }
+        }
         return
     }
     if (mode == "wp") {
@@ -124,7 +147,13 @@ fun TweakDialog(
 @Composable
 fun DlgButton(onClick: () -> Unit, enabled: Boolean = true, content: @Composable RowScope.() -> Unit) {
     val mode = LocalCfg.current.uiMode
-    if (mode == "wp") {
+    if (mode == "sym") {
+        Row(
+            Modifier.clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp, vertical = 13.dp).alpha(if (enabled) 1f else 0.5f),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
+        )
+    } else if (mode == "wp") {
         Row(
             Modifier
                 .fillMaxWidth()

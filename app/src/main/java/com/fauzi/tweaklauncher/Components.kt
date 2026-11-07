@@ -293,7 +293,7 @@ fun MenuItem(label: String, onClick: () -> Unit) {
 fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false, badge: Boolean = true) {
     val cfg = LocalCfg.current
     val pda = cfg.uiMode == "pda"
-    val shape = if (cfg.uiMode == "wp") androidx.compose.ui.graphics.RectangleShape else if (pda) RoundedCornerShape(4.dp) else if (cfg.uiMode == "win95" || cfg.uiMode == "xp" || cfg.uiMode == "mac") RoundedCornerShape(if (cfg.uiMode == "win95") 2.dp else 5.dp) else iconShape(cfg.iconShape)
+    val shape = if (cfg.uiMode == "wp") androidx.compose.ui.graphics.RectangleShape else if (cfg.uiMode == "sym") RoundedCornerShape(7.dp) else if (pda) RoundedCornerShape(4.dp) else if (cfg.uiMode == "win95" || cfg.uiMode == "xp" || cfg.uiMode == "mac") RoundedCornerShape(if (cfg.uiMode == "win95") 2.dp else 5.dp) else iconShape(cfg.iconShape)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val packName = cfg.appIcon(app.pkg)
     val packBmp = if (packName != null) IconPack.get(ctx, packName) else null

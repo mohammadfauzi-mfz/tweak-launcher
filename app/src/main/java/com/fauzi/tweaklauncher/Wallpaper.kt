@@ -61,10 +61,18 @@ object WallpaperStore {
     }
 }
 
-fun Cfg.wallpaper(mode: String): String = if (mode == "xp") wpXp else wp95
+fun Cfg.wallpaper(mode: String): String = when (mode) {
+    "xp" -> wpXp
+    "sym" -> wpSym
+    else -> wp95
+}
 
 fun Cfg.setWallpaper(mode: String, v: String) {
-    if (mode == "xp") wpXp = v else wp95 = v
+    when (mode) {
+        "xp" -> wpXp = v
+        "sym" -> wpSym = v
+        else -> wp95 = v
+    }
 }
 
 @Composable
@@ -110,7 +118,7 @@ fun Modifier.wallpaperBg(spec: String, img: ImageBitmap?, default: DrawScope.() 
 fun WallpaperCard(vm: MainVm) {
     val cfg = vm.cfg
     val mode = cfg.uiMode
-    if (mode != "win95" && mode != "xp") return
+    if (mode != "win95" && mode != "xp" && mode != "sym") return
     val ctx = LocalContext.current
     val spec = cfg.wallpaper(mode)
     val kind = when {
@@ -120,7 +128,7 @@ fun WallpaperCard(vm: MainVm) {
         else -> "default"
     }
     var hex by remember(mode) {
-        mutableStateOf(if (spec.startsWith("color:")) spec.removePrefix("color:") else if (mode == "xp") "3A78D8" else "008080")
+        mutableStateOf(if (spec.startsWith("color:")) spec.removePrefix("color:") else if (mode == "xp") "3A78D8" else if (mode == "sym") "1F63B5" else "008080")
     }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null && WallpaperStore.save(ctx, mode, uri)) {

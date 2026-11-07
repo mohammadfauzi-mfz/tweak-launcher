@@ -51,6 +51,8 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     var pdaStart by mutableStateOf(false)
     var iconPick by mutableStateOf<IconTarget?>(null)
     var clockOpen by mutableStateOf(false)
+    var symOpts by mutableStateOf(false)
+    var symSel by mutableStateOf<String?>(null)
     var wpEdit by mutableStateOf<String?>(null)
     var fwOpen by mutableStateOf(false)
     var adsMsg by mutableStateOf("")

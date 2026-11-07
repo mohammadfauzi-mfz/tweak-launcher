@@ -107,6 +107,7 @@ class Cfg(ctx: Context) {
     var wpAccent by s("wpAccent", "1BA1E2")
     var wpOrder by s("wpOrder", "")
     var wpSizes by s("wpSizes", "{}")
+    var wpSym by s("wpSym", "")
     var wp95 by s("wp95", "")
     var deskOrder by s("deskOrder", "")
     var wpXp by s("wpXp", "")

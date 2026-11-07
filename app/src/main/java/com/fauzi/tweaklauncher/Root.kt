@@ -70,7 +70,7 @@ fun Root(vm: MainVm) {
                     .background((if (dark) Color.Black else Color.White).copy(alpha = cfg.dim / 100f))
             )
         }
-        if (cfg.uiMode == "pda") PdaFrame(vm) else if (cfg.uiMode == "win95") W95Frame(vm) else if (cfg.uiMode == "xp") XpFrame(vm) else if (cfg.uiMode == "dos") DosFrame(vm) else if (cfg.uiMode == "mac") MacFrame(vm) else if (cfg.uiMode == "wp") WpFrame(vm) else Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
+        if (cfg.uiMode == "pda") PdaFrame(vm) else if (cfg.uiMode == "win95") W95Frame(vm) else if (cfg.uiMode == "xp") XpFrame(vm) else if (cfg.uiMode == "dos") DosFrame(vm) else if (cfg.uiMode == "mac") MacFrame(vm) else if (cfg.uiMode == "wp") WpFrame(vm) else if (cfg.uiMode == "sym") SymFrame(vm) else Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
             Box(
                 Modifier
                     .weight(1f)
