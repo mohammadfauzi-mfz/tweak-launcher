@@ -30,6 +30,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Mode Windows 95: semua dialog (folder, pembaruan, grup, ikon, dan lainnya) tampil sebagai jendela klasik dengan title bar biru dan tombol timbul.
 - Firewall per aplikasi di Perawatan (VPN lokal tanpa root): blokir semua jaringan, hanya Wi-Fi, atau hanya data seluler; tombol blokir semua aplikasi non-sistem.
 - Firewall punya dua cara kerja: VPN lokal, atau Shizuku (tanpa VPN, blokir total per aplikasi).
+- Blok iklan lewat DNS privat sistem (AdGuard, AdGuard Keluarga, atau host kustom) via Shizuku, untuk seluruh HP tanpa VPN.
 - Impor paket ikon (.zip PNG/WebP/JPG) di Setelan > Ikon, tampil di galeri, bisa dihapus dan dipakai tebak otomatis.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.

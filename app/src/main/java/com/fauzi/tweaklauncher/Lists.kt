@@ -150,6 +150,8 @@ fun CareScreen(vm: MainVm) {
 
         FirewallCard(vm)
 
+        AdsBlockCard(vm)
+
         if (!vm.usageOk) {
             SCard {
                 Text("Favorit dan terakhir dipakai", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
