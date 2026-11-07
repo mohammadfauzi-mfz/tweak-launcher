@@ -32,6 +32,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Firewall punya dua cara kerja: VPN lokal, atau Shizuku (tanpa VPN, blokir total per aplikasi).
 - Blok iklan lewat DNS privat sistem (AdGuard, AdGuard Keluarga, atau host kustom) via Shizuku, untuk seluruh HP tanpa VPN.
 - Penguji DNS: ukur kecepatan dan kemampuan blok iklan beberapa penyedia DNS, lalu pakai satu ketukan.
+- Windows XP menyamai 95: menu Start dengan "Semua Program" berikon, menu tahan-lama XP (pindah dan susun ikon), dialog bergaya XP, tray dengan Wi-Fi, speaker, dan baterai.
 - Impor paket ikon (.zip PNG/WebP/JPG) di Setelan > Ikon, tampil di galeri, bisa dihapus dan dipakai tebak otomatis.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.

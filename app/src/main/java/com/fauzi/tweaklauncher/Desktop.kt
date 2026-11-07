@@ -44,9 +44,9 @@ private fun deskLabel(i: DeskItem): String = when (i) {
     }
 }
 
-/** Urutan tampil: sesuai urutan tersimpan (khusus Windows 95), sisanya mengikuti urutan bawaan. */
+/** Urutan tampil: sesuai urutan tersimpan (Windows 95 dan XP), sisanya mengikuti urutan bawaan. */
 private fun ordered(vm: MainVm, items: List<DeskItem>): List<DeskItem> {
-    if (vm.cfg.uiMode != "win95") return items
+    if (vm.cfg.uiMode != "win95" && vm.cfg.uiMode != "xp") return items
     val order = vm.cfg.deskOrder.split(SEP).filter { it.isNotEmpty() }
     if (order.isEmpty()) return items
     val idx = HashMap<String, Int>()

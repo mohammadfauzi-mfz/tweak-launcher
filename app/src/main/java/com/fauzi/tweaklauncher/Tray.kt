@@ -9,6 +9,9 @@ import android.net.wifi.WifiManager
 import android.provider.Settings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +56,7 @@ import kotlin.math.roundToInt
 
 /** Ikon speaker kecil untuk tray. */
 @Composable
-fun TraySpeaker(modifier: Modifier = Modifier) {
+fun TraySpeaker(modifier: Modifier = Modifier, tint: Color = Color.Black) {
     Canvas(modifier.size(16.dp)) {
         val w = size.width
         val p = Path().apply {
@@ -65,31 +68,31 @@ fun TraySpeaker(modifier: Modifier = Modifier) {
             lineTo(w * 0.1f, w * 0.62f)
             close()
         }
-        drawPath(p, Color.Black)
-        drawArc(Color.Black, -50f, 100f, false, Offset(w * 0.5f, w * 0.3f), Size(w * 0.35f, w * 0.4f), style = Stroke(w * 0.08f))
+        drawPath(p, tint)
+        drawArc(tint, -50f, 100f, false, Offset(w * 0.5f, w * 0.3f), Size(w * 0.35f, w * 0.4f), style = Stroke(w * 0.08f))
     }
 }
 
 /** Ikon Wi-Fi kecil (tiga batang) untuk tray. */
 @Composable
-fun TrayWifi(modifier: Modifier = Modifier) {
+fun TrayWifi(modifier: Modifier = Modifier, tint: Color = Color.Black) {
     Canvas(modifier.size(16.dp)) {
         val w = size.width
         for (i in 0 until 3) {
             val h = w * (0.35f + 0.25f * i)
-            drawRect(Color.Black, Offset(w * (0.1f + 0.3f * i), w * 0.9f - h), Size(w * 0.2f, h))
+            drawRect(tint, Offset(w * (0.1f + 0.3f * i), w * 0.9f - h), Size(w * 0.2f, h))
         }
     }
 }
 
 /** Ikon baterai kecil, terisi sesuai [pct]. */
 @Composable
-fun TrayBattery(pct: Int, modifier: Modifier = Modifier) {
+fun TrayBattery(pct: Int, modifier: Modifier = Modifier, tint: Color = Color.Black) {
     Canvas(modifier.size(width = 18.dp, height = 12.dp)) {
         val w = size.width
         val h = size.height
-        drawRect(Color.Black, Offset(0f, 0f), Size(w * 0.9f, h), style = Stroke(1.5.dp.toPx()))
-        drawRect(Color.Black, Offset(w * 0.9f, h * 0.3f), Size(w * 0.1f, h * 0.4f))
+        drawRect(tint, Offset(0f, 0f), Size(w * 0.9f, h), style = Stroke(1.5.dp.toPx()))
+        drawRect(tint, Offset(w * 0.9f, h * 0.3f), Size(w * 0.1f, h * 0.4f))
         val f = (pct.coerceIn(0, 100) / 100f)
         drawRect(
             if (pct <= 20) Color(0xFFC62828) else Color(0xFF008000),
@@ -100,12 +103,17 @@ fun TrayBattery(pct: Int, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun TrayButton(label: String, onClick: () -> Unit) {
+private fun TrayButton(label: String, xp: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .background(Color(0xFFC0C0C0))
-            .bevel(true)
+            .then(
+                if (xp) Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFFF1EFE2))
+                    .border(1.dp, Color(0xFF003C74), RoundedCornerShape(4.dp))
+                else Modifier.background(Color(0xFFC0C0C0)).bevel(true)
+            )
             .clickable(onClick = onClick)
             .padding(vertical = 7.dp),
         contentAlignment = Alignment.Center
@@ -133,7 +141,7 @@ private fun netText(ctx: Context): String = try {
 
 /** Popup volume atau Wi-Fi saat ikon tray diketuk (mode Windows 95). */
 @Composable
-fun W95TrayPopup(vm: MainVm, barHeight: Dp) {
+fun W95TrayPopup(vm: MainVm, barHeight: Dp, xp: Boolean = false) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val which = vm.trayPop
@@ -148,8 +156,13 @@ fun W95TrayPopup(vm: MainVm, barHeight: Dp) {
                 .navigationBarsPadding()
                 .padding(end = 4.dp, bottom = barHeight + 2.dp)
                 .width(220.dp)
-                .background(Color(0xFFC0C0C0))
-                .bevel(true)
+                .then(
+                    if (xp) Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFECE9D8))
+                        .border(2.dp, Color(0xFF0A4FC8), RoundedCornerShape(8.dp))
+                    else Modifier.background(Color(0xFFC0C0C0)).bevel(true)
+                )
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -170,15 +183,15 @@ fun W95TrayPopup(vm: MainVm, barHeight: Dp) {
                     valueRange = 0f..max.toFloat(),
                     steps = (max - 1).coerceAtLeast(0),
                     colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF000080),
-                        activeTrackColor = Color(0xFF000080),
+                        thumbColor = if (xp) Color(0xFF245EDC) else Color(0xFF000080),
+                        activeTrackColor = if (xp) Color(0xFF245EDC) else Color(0xFF000080),
                         inactiveTrackColor = Color(0xFF808080),
                         activeTickColor = Color.Transparent,
                         inactiveTickColor = Color.Transparent
                     )
                 )
                 Text("$vol / $max", color = Color.Black, fontSize = 12.sp)
-                TrayButton(if (muted) "Suarakan" else "Bisukan") {
+                TrayButton(if (muted) "Suarakan" else "Bisukan", xp) {
                     am.adjustStreamVolume(
                         AudioManager.STREAM_MUSIC,
                         if (muted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE,
@@ -199,7 +212,7 @@ fun W95TrayPopup(vm: MainVm, barHeight: Dp) {
                 Text("Wi-Fi", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Text(if (on) "Wi-Fi aktif" else "Wi-Fi mati", color = Color.Black, fontSize = 13.sp)
                 Text(net, color = Color.Black, fontSize = 12.sp)
-                TrayButton(if (on) "Matikan Wi-Fi" else "Nyalakan Wi-Fi") {
+                TrayButton(if (on) "Matikan Wi-Fi" else "Nyalakan Wi-Fi", xp) {
                     scope.launch {
                         val ok = withContext(Dispatchers.IO) {
                             if (Shell.state() == ShizukuState.READY) {
@@ -209,7 +222,7 @@ fun W95TrayPopup(vm: MainVm, barHeight: Dp) {
                         if (!ok) openWifiPanel(ctx)
                     }
                 }
-                TrayButton("Setelan Wi-Fi...") { openWifiPanel(ctx) }
+                TrayButton("Setelan Wi-Fi...", xp) { openWifiPanel(ctx) }
             }
         }
     }

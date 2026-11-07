@@ -42,7 +42,7 @@ fun AppMenu(vm: MainVm) {
         if (folder != null) {
             add("Keluarkan dari folder $folder" to { vm.removeFromFolder(folder, a.pkg); close() })
         }
-        if (vm.cfg.uiMode == "win95" && vm.isPinned(a.pkg)) {
+        if ((vm.cfg.uiMode == "win95" || vm.cfg.uiMode == "xp") && vm.isPinned(a.pkg)) {
             add(null)
             add("Pindahkan ikon" to { vm.deskMove = "app:" + a.pkg; close() })
             add("Susun ikon: nama" to { vm.arrangeDesk(true); close() })
@@ -69,6 +69,10 @@ fun AppMenu(vm: MainVm) {
 
     if (vm.cfg.uiMode == "win95") {
         W95ContextMenu(a.label, items) { close() }
+        return
+    }
+    if (vm.cfg.uiMode == "xp") {
+        XpContextMenu(a.label, items) { close() }
         return
     }
 

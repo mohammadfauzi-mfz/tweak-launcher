@@ -34,7 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,19 +63,21 @@ import java.util.Date
 import java.util.Locale
 
 private val XP_BAR_H = 40.dp
-private val XP_BEIGE = Color(0xFFECE9D8)
-private val XP_BLUE_DARK = Color(0xFF0A4FC8)
+internal val XP_BEIGE = Color(0xFFECE9D8)
+internal val XP_BLUE_DARK = Color(0xFF0A4FC8)
 private val XP_BLUE = Color(0xFF2F6FE0)
 
 private fun xpBarBrush() = Brush.verticalGradient(listOf(Color(0xFF3C81F3), Color(0xFF245EDC), Color(0xFF1941A5)))
-private fun xpTitleBrush() = Brush.verticalGradient(listOf(Color(0xFF3D8FF5), Color(0xFF0A5FE0), Color(0xFF0A4FC8)))
+internal fun xpTitleBrush() = Brush.verticalGradient(listOf(Color(0xFF3D8FF5), Color(0xFF0A5FE0), Color(0xFF0A4FC8)))
 private fun xpStartBrush() = Brush.verticalGradient(listOf(Color(0xFF5CB85C), Color(0xFF3A9A3A), Color(0xFF2B7A2B)))
 
 @Composable
 fun XpFrame(vm: MainVm) {
-    BackHandler(enabled = vm.w95Start || vm.clockOpen) {
+    BackHandler(enabled = vm.w95Start || vm.clockOpen || vm.trayPop.isNotEmpty() || vm.deskMove != null) {
         vm.w95Start = false
         vm.clockOpen = false
+        vm.trayPop = ""
+        vm.deskMove = null
     }
     LaunchedEffect(vm.screen) {
         if (vm.screen != Screen.Home && vm.screen !in vm.w95Windows) vm.w95Windows.add(vm.screen)
@@ -88,6 +92,7 @@ fun XpFrame(vm: MainVm) {
         }
         if (vm.w95Start) XpStartMenu(vm)
         if (vm.clockOpen) ClockPopup(vm, 1, XP_BAR_H)
+        if (vm.trayPop.isNotEmpty()) W95TrayPopup(vm, XP_BAR_H, xp = true)
     }
 }
 
@@ -274,7 +279,10 @@ private fun XpTaskbar(vm: MainVm) {
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp))
                 .background(xpStartBrush())
-                .clickable { vm.w95Start = !vm.w95Start }
+                .clickable {
+                    vm.trayPop = ""
+                    vm.w95Start = !vm.w95Start
+                }
                 .padding(start = 10.dp, end = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -319,18 +327,36 @@ private fun XpTaskbar(vm: MainVm) {
                 }
             }
         }
-        Box(
+        Row(
             Modifier
                 .fillMaxHeight()
                 .background(Color(0xFF0F8CE8))
-                .clickable {
-                    vm.w95Start = false
-                    vm.clockOpen = !vm.clockOpen
-                }
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("${vm.stats.battery}%  $time", color = Color.White, fontSize = 12.sp)
+            TrayWifi(Modifier.clickable {
+                vm.w95Start = false
+                vm.clockOpen = false
+                vm.trayPop = if (vm.trayPop == "wifi") "" else "wifi"
+            }, Color.White)
+            TraySpeaker(Modifier.clickable {
+                vm.w95Start = false
+                vm.clockOpen = false
+                vm.trayPop = if (vm.trayPop == "vol") "" else "vol"
+            }, Color.White)
+            Row(
+                Modifier.clickable {
+                    vm.w95Start = false
+                    vm.trayPop = ""
+                    vm.clockOpen = !vm.clockOpen
+                },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                TrayBattery(vm.stats.battery, tint = Color.White)
+                Text("${vm.stats.battery}%  $time", color = Color.White, fontSize = 12.sp)
+            }
         }
     }
 }
@@ -360,8 +386,22 @@ private fun XpMenuRow(label: String, kind: Int, bold: Boolean = false, onClick: 
 }
 
 @Composable
+private fun XpAppRow(a: AppItem, icon: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AppIcon(a, icon, badge = false)
+        Text(a.label, color = Color.Black, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
 private fun XpStartPanel(vm: MainVm) {
     LaunchedEffect(Unit) { vm.loadUsage() }
+    var showAll by remember { mutableStateOf(false) }
+    val allApps = remember(vm.apps) { vm.apps.sortedBy { it.label.lowercase() } }
     val shape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
     Column(
         Modifier
@@ -386,24 +426,37 @@ private fun XpStartPanel(vm: MainVm) {
         }
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Column(Modifier.weight(1f).fillMaxHeight().background(Color.White).padding(vertical = 4.dp)) {
-                vm.recentApps.take(6).forEach { a ->
+                if (showAll) {
+                    Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
+                        allApps.forEach { a -> XpAppRow(a, 24.dp) {
+                            vm.w95Start = false
+                            vm.launchApp(a.pkg)
+                        } }
+                    }
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).height(1.dp).background(Color(0xFFD0D0D0)))
                     Text(
-                        a.label,
+                        "\u25C0  Kembali",
                         color = Color.Black,
                         fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                vm.w95Start = false
-                                vm.launchApp(a.pkg)
-                            }
-                            .padding(horizontal = 10.dp, vertical = 9.dp)
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth().clickable { showAll = false }.padding(horizontal = 10.dp, vertical = 9.dp)
                     )
+                } else {
+                    vm.recentApps.take(6).forEach { a -> XpAppRow(a, 28.dp) {
+                        vm.w95Start = false
+                        vm.launchApp(a.pkg)
+                    } }
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).height(1.dp).background(Color(0xFFD0D0D0)))
+                    Row(
+                        Modifier.fillMaxWidth().clickable { showAll = true }.padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        W95Icon(1, 24.dp)
+                        Text("Semua Program", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text("\u25B6", color = Color(0xFF1E8A1E), fontSize = 12.sp)
+                    }
                 }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).height(1.dp).background(Color(0xFFD0D0D0)))
-                XpMenuRow("Semua Program", 1, bold = true) { vm.w95Open(Screen.Drawer) }
             }
             Column(Modifier.weight(1f).fillMaxHeight().background(Color(0xFFD3E5FA)).padding(vertical = 4.dp)) {
                 XpMenuRow("Komputer Saya", 0, bold = true) { vm.w95Open(Screen.Care) }
@@ -460,6 +513,45 @@ private fun XpStartMenu(vm: MainVm) {
                 .padding(start = 2.dp, bottom = XP_BAR_H)
         ) {
             XpStartPanel(vm)
+        }
+    }
+}
+
+
+/** Menu tahan-lama bergaya Windows XP: title bar biru bergradasi, isi putih, sudut atas membulat. */
+@Composable
+fun XpContextMenu(title: String, items: List<Pair<String, () -> Unit>?>, onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
+        Column(
+            Modifier
+                .width(270.dp)
+                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                .background(XP_BLUE_DARK)
+                .padding(3.dp)
+        ) {
+            Text(
+                title,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().background(xpTitleBrush()).padding(horizontal = 8.dp, vertical = 6.dp)
+            )
+            Column(Modifier.fillMaxWidth().background(Color.White).heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
+                items.forEach { it ->
+                    if (it == null) {
+                        Box(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp).height(1.dp).background(Color(0xFFD0D0D0)))
+                    } else {
+                        Text(
+                            it.first,
+                            color = Color.Black,
+                            fontSize = 14.sp,
+                            modifier = Modifier.fillMaxWidth().clickable(onClick = it.second).padding(horizontal = 12.dp, vertical = 9.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

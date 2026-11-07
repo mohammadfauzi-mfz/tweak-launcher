@@ -1,6 +1,9 @@
 package com.fauzi.tweaklauncher
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,7 +44,8 @@ fun TweakDialog(
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null
 ) {
-    if (LocalCfg.current.uiMode != "win95") {
+    val mode = LocalCfg.current.uiMode
+    if (mode != "win95" && mode != "xp") {
         AlertDialog(
             onDismissRequest = onDismissRequest,
             containerColor = containerColor,
@@ -53,18 +57,24 @@ fun TweakDialog(
         return
     }
     val white = LocalPal.current.copy(text = Color.White, soft = Color.White, sub = Color.White)
+    val xp = mode == "xp"
     Dialog(onDismissRequest = onDismissRequest, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
             Column(
                 Modifier
                     .widthIn(max = 440.dp)
                     .fillMaxWidth()
-                    .background(DLG_GRAY)
-                    .bevel(true)
+                    .then(
+                        if (xp) Modifier.clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(XP_BLUE_DARK)
+                        else Modifier.background(DLG_GRAY).bevel(true)
+                    )
                     .padding(3.dp)
             ) {
                 Row(
-                    Modifier.fillMaxWidth().background(DLG_NAVY).padding(start = 8.dp, top = 3.dp, bottom = 3.dp, end = 3.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .then(if (xp) Modifier.background(xpTitleBrush()) else Modifier.background(DLG_NAVY))
+                        .padding(start = 8.dp, top = 3.dp, bottom = 3.dp, end = 3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(Modifier.weight(1f)) {
@@ -79,7 +89,7 @@ fun TweakDialog(
                         contentAlignment = Alignment.Center
                     ) { Text("✕", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                 }
-                Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                Column(Modifier.fillMaxWidth().background(if (xp) XP_BEIGE else DLG_GRAY).padding(14.dp)) {
                     if (text != null) text()
                     Row(
                         Modifier.fillMaxWidth().padding(top = 14.dp),
@@ -98,11 +108,17 @@ fun TweakDialog(
 /** Tombol dialog: timbul ala Windows 95 di mode itu, TextButton biasa di mode lain. */
 @Composable
 fun DlgButton(onClick: () -> Unit, enabled: Boolean = true, content: @Composable RowScope.() -> Unit) {
-    if (LocalCfg.current.uiMode == "win95") {
+    val mode = LocalCfg.current.uiMode
+    if (mode == "win95" || mode == "xp") {
         Row(
             Modifier
-                .background(DLG_GRAY)
-                .bevel(true)
+                .then(
+                    if (mode == "xp") Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFFF1EFE2))
+                        .border(1.dp, Color(0xFF003C74), RoundedCornerShape(4.dp))
+                    else Modifier.background(DLG_GRAY).bevel(true)
+                )
                 .clickable(enabled = enabled, onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 7.dp)
                 .alpha(if (enabled) 1f else 0.5f),
