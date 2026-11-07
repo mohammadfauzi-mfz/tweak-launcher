@@ -391,10 +391,10 @@ private fun W95MenuRow(label: String, kind: Int, arrow: Boolean = false, active:
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        W95Icon(kind, 32.dp)
-        Text(label, color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        W95Icon(kind, 28.dp)
+        Text(label, color = fg, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
         if (arrow) Text("\u25B6", color = fg, fontSize = 10.sp)
     }
 }
@@ -411,7 +411,7 @@ private fun W95Banner(modifier: Modifier) {
             val p = android.graphics.Paint().apply {
                 isAntiAlias = true
                 color = android.graphics.Color.WHITE
-                textSize = 22.sp.toPx()
+                textSize = 19.sp.toPx()
                 isFakeBoldText = true
             }
             c.nativeCanvas.save()
@@ -436,8 +436,8 @@ private fun W95SubApp(a: AppItem, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        AppIcon(a, 26.dp, badge = false)
-        Text(a.label, color = Color.Black, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        AppIcon(a, 24.dp, badge = false)
+        Text(a.label, color = Color.Black, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -450,13 +450,13 @@ private fun BoxScopeStart(vm: MainVm) {
     Box {
         Row(
             Modifier
-                .width(250.dp)
+                .width(200.dp)
                 .height(IntrinsicSize.Min)
                 .background(W95_GRAY)
                 .bevel(true)
                 .padding(3.dp)
         ) {
-            W95Banner(Modifier.width(32.dp).fillMaxHeight())
+            W95Banner(Modifier.width(28.dp).fillMaxHeight())
             Column(Modifier.weight(1f)) {
                 W95MenuRow("Program", 1, arrow = true, active = sub == 1) { sub = if (sub == 1) 0 else 1 }
                 W95MenuRow("Komputer Saya", 0) { vm.w95Open(Screen.Care) }
@@ -473,8 +473,8 @@ private fun BoxScopeStart(vm: MainVm) {
             Column(
                 Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 130.dp)
-                    .width(220.dp)
+                    .padding(start = 172.dp)
+                    .width(184.dp)
                     .heightIn(max = 420.dp)
                     .background(W95_GRAY)
                     .bevel(true)
