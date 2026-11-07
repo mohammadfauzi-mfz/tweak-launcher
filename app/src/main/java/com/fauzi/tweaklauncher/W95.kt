@@ -450,6 +450,7 @@ private fun BoxScopeStart(vm: MainVm) {
     Box {
         Row(
             Modifier
+                .align(Alignment.BottomStart)
                 .width(200.dp)
                 .height(IntrinsicSize.Min)
                 .background(W95_GRAY)
@@ -472,7 +473,7 @@ private fun BoxScopeStart(vm: MainVm) {
         if (sub != 0) {
             Column(
                 Modifier
-                    .align(Alignment.TopStart)
+                    .align(Alignment.BottomStart)
                     .padding(start = 172.dp)
                     .width(184.dp)
                     .heightIn(max = 420.dp)
