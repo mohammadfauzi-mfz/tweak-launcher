@@ -45,7 +45,7 @@ fun TweakDialog(
     dismissButton: (@Composable () -> Unit)? = null
 ) {
     val mode = LocalCfg.current.uiMode
-    if (mode != "win95" && mode != "xp") {
+    if (mode != "win95" && mode != "xp" && mode != "wp") {
         AlertDialog(
             onDismissRequest = onDismissRequest,
             containerColor = containerColor,
@@ -54,6 +54,21 @@ fun TweakDialog(
             confirmButton = confirmButton,
             dismissButton = dismissButton
         )
+        return
+    }
+    if (mode == "wp") {
+        Dialog(onDismissRequest = onDismissRequest, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Column(Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).padding(horizontal = 20.dp, vertical = 20.dp)) {
+                if (title != null) title()
+                if (text != null) {
+                    Box(Modifier.padding(top = 12.dp)) { text() }
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.weight(1f)) { confirmButton() }
+                    if (dismissButton != null) Box(Modifier.weight(1f)) { dismissButton() }
+                }
+            }
+        }
         return
     }
     val white = LocalPal.current.copy(text = Color.White, soft = Color.White, sub = Color.White)
@@ -109,7 +124,19 @@ fun TweakDialog(
 @Composable
 fun DlgButton(onClick: () -> Unit, enabled: Boolean = true, content: @Composable RowScope.() -> Unit) {
     val mode = LocalCfg.current.uiMode
-    if (mode == "win95" || mode == "xp") {
+    if (mode == "wp") {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF3A3A3A))
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(vertical = 12.dp)
+                .alpha(if (enabled) 1f else 0.5f),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
+        )
+    } else if (mode == "win95" || mode == "xp") {
         Row(
             Modifier
                 .then(

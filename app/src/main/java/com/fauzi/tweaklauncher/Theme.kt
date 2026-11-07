@@ -139,6 +139,7 @@ object Pal {
         "win95", "dos" -> androidx.compose.ui.graphics.RectangleShape
         "mac" -> RoundedCornerShape(6.dp)
         "xp" -> RoundedCornerShape(4.dp)
+        "wp" -> androidx.compose.ui.graphics.RectangleShape
         else -> CircleShape
     }
 }
@@ -146,8 +147,8 @@ object Pal {
 @Composable
 fun TweakTheme(cfg: Cfg, content: @Composable () -> Unit) {
     val pda = cfg.uiMode == "pda"
-    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette().copy(wallpaper = cfg.wp95 == "system") else if (cfg.uiMode == "xp") xpPalette().copy(wallpaper = cfg.wpXp == "system") else if (cfg.uiMode == "dos") dosPalette(cfg.dosColor) else if (cfg.uiMode == "mac") macPalette() else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
-    val ff = if (pda || cfg.uiMode == "dos") FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp" || cfg.uiMode == "mac") FontFamily.SansSerif else when (cfg.font) {
+    val pal = if (pda) pdaPalette() else if (cfg.uiMode == "win95") win95Palette().copy(wallpaper = cfg.wp95 == "system") else if (cfg.uiMode == "xp") xpPalette().copy(wallpaper = cfg.wpXp == "system") else if (cfg.uiMode == "dos") dosPalette(cfg.dosColor) else if (cfg.uiMode == "mac") macPalette() else if (cfg.uiMode == "wp") wpPalette(cfg.wpAccent) else buildPalette(cfg.theme, cfg.accent, cfg.radius, cfg.cardAlpha, cfg.background == "wallpaper")
+    val ff = if (pda || cfg.uiMode == "dos") FontFamily.Monospace else if (cfg.uiMode == "win95" || cfg.uiMode == "xp" || cfg.uiMode == "mac" || cfg.uiMode == "wp") FontFamily.SansSerif else when (cfg.font) {
         "serif" -> FontFamily.Serif
         "mono" -> FontFamily.Monospace
         "cursive" -> FontFamily.Cursive
