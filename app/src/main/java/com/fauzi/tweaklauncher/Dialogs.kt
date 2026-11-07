@@ -36,34 +36,51 @@ fun AppMenu(vm: MainVm) {
         vm.menuApp = null
     }
 
+    // null = garis pemisah (hanya dipakai gaya Windows 95)
+    val items: List<Pair<String, () -> Unit>?> = buildList {
+        add((if (isGame) "Hapus dari Boost" else "Tandai sebagai Boost") to { vm.toggleGame(a.pkg); close() })
+        add((if (vm.isPinned(a.pkg)) "Lepas dari Beranda" else "Sematkan ke Beranda") to { vm.togglePin(a.pkg); close() })
+        add((if (inDock) "Lepas dari dock" else "Taruh di dock") to { vm.toggleDock(a.pkg); close() })
+        if (folder != null) {
+            add("Keluarkan dari folder $folder" to { vm.removeFromFolder(folder, a.pkg); close() })
+        }
+        if (vm.cfg.uiMode == "win95" && vm.isPinned(a.pkg)) {
+            add(null)
+            add("Pindahkan ikon" to { vm.deskMove = "app:" + a.pkg; close() })
+            add("Susun ikon: nama" to { vm.arrangeDesk(true); close() })
+            add("Susun ikon: bawaan" to { vm.arrangeDesk(false); close() })
+            add(null)
+        }
+        add("Ikon..." to { vm.iconPick = IconTarget(false, a.pkg, a.label); close() })
+        add("Grup..." to { vm.groupPickApp = a; close() })
+        add("Masukkan ke folder..." to { vm.folderPickApp = a; close() })
+        add("Profil khusus untuk aplikasi ini..." to { vm.profilePickApp = a; close() })
+        add((if (isHidden) "Tampilkan di daftar" else "Sembunyikan dari daftar") to { vm.toggleHidden(a.pkg); close() })
+        add((if (isSleeping) "Bangunkan aplikasi" else "Tidurkan aplikasi") to {
+            if (isSleeping) vm.wakeApp(a.pkg) else vm.sleepApp(a.pkg)
+            close()
+        })
+        if (vm.cfg.badgeOn) {
+            add((if (a.pkg in Sys.list(vm.cfg.badgeOffCsv)) "Nyalakan badge" else "Matikan badge") to { vm.toggleBadge(a.pkg); close() })
+        }
+        add("Optimalkan (compile speed)" to { vm.optimize(a.pkg); close() })
+        add("Hentikan paksa" to { vm.forceStop(a.pkg); close() })
+        add("Info aplikasi" to { vm.openInfo(a.pkg); close() })
+        add("Copot pemasangan" to { vm.uninstall(a.pkg); close() })
+    }
+
+    if (vm.cfg.uiMode == "win95") {
+        W95ContextMenu(a.label, items) { close() }
+        return
+    }
+
     AlertDialog(
         onDismissRequest = { close() },
         containerColor = Pal.card,
         title = { Text(a.label, color = Pal.text) },
         text = {
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                MenuItem(if (isGame) "Hapus dari Boost" else "Tandai sebagai Boost") { vm.toggleGame(a.pkg); close() }
-                MenuItem(if (vm.isPinned(a.pkg)) "Lepas dari Beranda" else "Sematkan ke Beranda") { vm.togglePin(a.pkg); close() }
-                MenuItem(if (inDock) "Lepas dari dock" else "Taruh di dock") { vm.toggleDock(a.pkg); close() }
-                if (folder != null) {
-                    MenuItem("Keluarkan dari folder $folder") { vm.removeFromFolder(folder, a.pkg); close() }
-                }
-                MenuItem("Ikon...") { vm.iconPick = IconTarget(false, a.pkg, a.label); close() }
-                MenuItem("Grup...") { vm.groupPickApp = a; close() }
-                MenuItem("Masukkan ke folder...") { vm.folderPickApp = a; close() }
-                MenuItem("Profil khusus untuk aplikasi ini...") { vm.profilePickApp = a; close() }
-                MenuItem(if (isHidden) "Tampilkan di daftar" else "Sembunyikan dari daftar") { vm.toggleHidden(a.pkg); close() }
-                MenuItem(if (isSleeping) "Bangunkan aplikasi" else "Tidurkan aplikasi") {
-                    if (isSleeping) vm.wakeApp(a.pkg) else vm.sleepApp(a.pkg)
-                    close()
-                }
-                if (vm.cfg.badgeOn) {
-                    MenuItem(if (a.pkg in Sys.list(vm.cfg.badgeOffCsv)) "Nyalakan badge" else "Matikan badge") { vm.toggleBadge(a.pkg); close() }
-                }
-                MenuItem("Optimalkan (compile speed)") { vm.optimize(a.pkg); close() }
-                MenuItem("Hentikan paksa") { vm.forceStop(a.pkg); close() }
-                MenuItem("Info aplikasi") { vm.openInfo(a.pkg); close() }
-                MenuItem("Copot pemasangan") { vm.uninstall(a.pkg); close() }
+                items.forEach { it?.let { (label, act) -> MenuItem(label, act) } }
             }
         },
         confirmButton = {

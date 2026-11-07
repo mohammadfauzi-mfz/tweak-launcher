@@ -93,9 +93,11 @@ internal fun w95Title(s: Screen) = when (s) {
 
 @Composable
 fun W95Frame(vm: MainVm) {
-    BackHandler(enabled = vm.w95Start || vm.clockOpen) {
+    BackHandler(enabled = vm.w95Start || vm.clockOpen || vm.trayPop.isNotEmpty() || vm.deskMove != null) {
         vm.w95Start = false
         vm.clockOpen = false
+        vm.trayPop = ""
+        vm.deskMove = null
     }
     // Jendela yang dibuka lewat gestur atau tombol lain tetap masuk ke taskbar.
     LaunchedEffect(vm.screen) {
@@ -111,6 +113,7 @@ fun W95Frame(vm: MainVm) {
         }
         if (vm.w95Start) W95StartMenu(vm)
         if (vm.clockOpen) ClockPopup(vm, 0, TASKBAR_H)
+        if (vm.trayPop.isNotEmpty()) W95TrayPopup(vm, TASKBAR_H)
     }
 }
 
@@ -323,7 +326,10 @@ private fun W95Taskbar(vm: MainVm) {
                     .fillMaxHeight()
                     .background(W95_GRAY)
                     .bevel(!vm.w95Start)
-                    .clickable { vm.w95Start = !vm.w95Start }
+                    .clickable {
+                        vm.trayPop = ""
+                        vm.w95Start = !vm.w95Start
+                    }
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -361,19 +367,37 @@ private fun W95Taskbar(vm: MainVm) {
                     }
                 }
             }
-            Box(
+            Row(
                 Modifier
                     .fillMaxHeight()
                     .background(W95_GRAY)
                     .bevel(false)
-                    .clickable {
-                        vm.w95Start = false
-                        vm.clockOpen = !vm.clockOpen
-                    }
                     .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("${vm.stats.battery}%  $time", color = Color.Black, fontSize = 12.sp)
+                TrayWifi(Modifier.clickable {
+                    vm.w95Start = false
+                    vm.clockOpen = false
+                    vm.trayPop = if (vm.trayPop == "wifi") "" else "wifi"
+                })
+                TraySpeaker(Modifier.clickable {
+                    vm.w95Start = false
+                    vm.clockOpen = false
+                    vm.trayPop = if (vm.trayPop == "vol") "" else "vol"
+                })
+                Row(
+                    Modifier.clickable {
+                        vm.w95Start = false
+                        vm.trayPop = ""
+                        vm.clockOpen = !vm.clockOpen
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    TrayBattery(vm.stats.battery)
+                    Text("${vm.stats.battery}%  $time", color = Color.Black, fontSize = 12.sp)
+                }
             }
         }
     }
@@ -521,6 +545,48 @@ private fun W95StartMenu(vm: MainVm) {
                 .padding(start = 3.dp, bottom = TASKBAR_H + 2.dp)
         ) {
             BoxScopeStart(vm)
+        }
+    }
+}
+
+
+/** Menu klik kanan bergaya Windows 95: panel abu-abu timbul dengan judul biru dan daftar perintah. */
+@Composable
+fun W95ContextMenu(title: String, items: List<Pair<String, () -> Unit>?>, onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
+        Column(
+            Modifier
+                .width(260.dp)
+                .background(W95_GRAY)
+                .bevel(true)
+                .padding(3.dp)
+        ) {
+            Text(
+                title,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().background(Color(0xFF000080)).padding(horizontal = 6.dp, vertical = 4.dp)
+            )
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
+                items.forEach { it ->
+                    if (it == null) {
+                        W95MenuLine()
+                    } else {
+                        Text(
+                            it.first,
+                            color = Color.Black,
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = it.second)
+                                .padding(horizontal = 12.dp, vertical = 9.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

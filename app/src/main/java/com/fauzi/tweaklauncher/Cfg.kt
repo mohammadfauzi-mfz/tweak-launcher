@@ -96,6 +96,7 @@ class Cfg(ctx: Context) {
     var sysIconsJson by s("sysIconsJ", "{}")
     var packGray by s("packGray", false)
     var wp95 by s("wp95", "")
+    var deskOrder by s("deskOrder", "")
     var wpXp by s("wpXp", "")
     var dosColor by s("dosColor", "green")
     var theme by s("theme", "amoled")
