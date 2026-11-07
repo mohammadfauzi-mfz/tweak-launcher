@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -42,6 +43,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -379,82 +382,123 @@ private fun W95Taskbar(vm: MainVm) {
 // ---------------------------------------------------------------- Menu Start
 
 @Composable
-private fun W95MenuRow(label: String, kind: Int, onClick: () -> Unit) {
+private fun W95MenuRow(label: String, kind: Int, arrow: Boolean = false, active: Boolean = false, onClick: () -> Unit) {
+    val fg = if (active) Color.White else Color.Black
     Row(
         Modifier
             .fillMaxWidth()
+            .background(if (active) Color(0xFF000080) else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        W95Icon(kind, 24.dp)
-        Text(label, color = Color.Black, fontSize = 14.sp)
+        W95Icon(kind, 32.dp)
+        Text(label, color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        if (arrow) Text("\u25B6", color = fg, fontSize = 10.sp)
     }
 }
 
 @Composable
 private fun W95MenuLine() {
-    Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp).height(2.dp).background(Color(0xFF808080)))
+    Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 3.dp).height(2.dp).background(Color(0xFF808080)))
+}
+
+@Composable
+private fun W95Banner(modifier: Modifier) {
+    Canvas(modifier.background(Color(0xFF808080))) {
+        drawIntoCanvas { c ->
+            val p = android.graphics.Paint().apply {
+                isAntiAlias = true
+                color = android.graphics.Color.WHITE
+                textSize = 22.sp.toPx()
+                isFakeBoldText = true
+            }
+            c.nativeCanvas.save()
+            c.nativeCanvas.translate(size.width * 0.78f, size.height - 8.dp.toPx())
+            c.nativeCanvas.rotate(-90f)
+            c.nativeCanvas.drawText("Windows", 0f, 0f, p)
+            val w = p.measureText("Windows ")
+            p.isFakeBoldText = false
+            c.nativeCanvas.drawText("95", w, 0f, p)
+            c.nativeCanvas.restore()
+        }
+    }
+}
+
+@Composable
+private fun W95SubApp(a: AppItem, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        AppIcon(a, 26.dp, badge = false)
+        Text(a.label, color = Color.Black, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @Composable
 private fun BoxScopeStart(vm: MainVm) {
-    var showProg by remember { mutableStateOf(false) }
+    // 0 = tertutup, 1 = submenu Program, 2 = submenu Setelan
+    var sub by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) { vm.loadUsage() }
-    Row(
-        Modifier
-            .width(250.dp)
-            .height(IntrinsicSize.Min)
-            .background(W95_GRAY)
-            .bevel(true)
-            .padding(3.dp)
-    ) {
-        Box(Modifier.width(26.dp).fillMaxHeight().background(Color(0xFF000080)))
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            W95MenuRow(if (showProg) "Program  ▾" else "Program  ▸", 1) { showProg = !showProg }
-            if (showProg) {
-                vm.recentApps.take(5).forEach { a ->
-                    Text(
-                        a.label,
-                        color = Color.Black,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                vm.w95Start = false
-                                vm.launchApp(a.pkg)
-                            }
-                            .padding(start = 42.dp, top = 7.dp, bottom = 7.dp, end = 6.dp)
-                    )
+    val apps = remember(vm.apps) { vm.apps.sortedBy { it.label.lowercase() } }
+    Box {
+        Row(
+            Modifier
+                .width(250.dp)
+                .height(IntrinsicSize.Min)
+                .background(W95_GRAY)
+                .bevel(true)
+                .padding(3.dp)
+        ) {
+            W95Banner(Modifier.width(32.dp).fillMaxHeight())
+            Column(Modifier.weight(1f)) {
+                W95MenuRow("Program", 1, arrow = true, active = sub == 1) { sub = if (sub == 1) 0 else 1 }
+                W95MenuRow("Komputer Saya", 0) { vm.w95Open(Screen.Care) }
+                W95MenuRow("Setelan", 2, arrow = true, active = sub == 2) { sub = if (sub == 2) 0 else 2 }
+                W95MenuRow("Cari...", 1) { vm.w95Open(Screen.Drawer) }
+                W95MenuLine()
+                W95MenuRow("Kunci layar...", 3) {
+                    vm.w95Start = false
+                    vm.runGesture("lock")
                 }
-                Text(
-                    "Semua program...",
-                    color = Color.Black,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { vm.w95Open(Screen.Drawer) }
-                        .padding(start = 42.dp, top = 7.dp, bottom = 7.dp)
-                )
             }
-            W95MenuRow("Komputer Saya", 0) { vm.w95Open(Screen.Care) }
-            W95MenuRow("Panel Kontrol", 2) {
-                vm.settingsPage = ""
-                vm.w95Open(Screen.Settings)
-            }
-            W95MenuRow("Cari...", 1) { vm.w95Open(Screen.Drawer) }
-            W95MenuLine()
-            W95MenuRow("Kunci layar...", 3) {
-                vm.w95Start = false
-                vm.runGesture("lock")
-            }
-            W95MenuRow("Mode Modern", 3) {
-                vm.w95Start = false
-                vm.cfg.uiMode = "modern"
+        }
+        if (sub != 0) {
+            Column(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 130.dp)
+                    .width(220.dp)
+                    .heightIn(max = 420.dp)
+                    .background(W95_GRAY)
+                    .bevel(true)
+                    .padding(3.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                if (sub == 1) {
+                    if (apps.isEmpty()) Text("Belum ada aplikasi", color = Color.Black, fontSize = 13.sp, modifier = Modifier.padding(8.dp))
+                    apps.forEach { a ->
+                        W95SubApp(a) {
+                            vm.w95Start = false
+                            vm.launchApp(a.pkg)
+                        }
+                    }
+                } else {
+                    W95MenuRow("Panel Kontrol", 2) {
+                        vm.settingsPage = ""
+                        vm.w95Open(Screen.Settings)
+                    }
+                    W95MenuRow("Mode Modern", 3) {
+                        vm.w95Start = false
+                        vm.cfg.uiMode = "modern"
+                    }
+                }
             }
         }
     }
