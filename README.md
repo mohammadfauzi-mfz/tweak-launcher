@@ -31,6 +31,7 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Firewall per aplikasi di Perawatan (VPN lokal tanpa root): blokir semua jaringan, hanya Wi-Fi, atau hanya data seluler; tombol blokir semua aplikasi non-sistem.
 - Firewall punya dua cara kerja: VPN lokal, atau Shizuku (tanpa VPN, blokir total per aplikasi).
 - Blok iklan lewat DNS privat sistem (AdGuard, AdGuard Keluarga, atau host kustom) via Shizuku, untuk seluruh HP tanpa VPN.
+- Penguji DNS: ukur kecepatan dan kemampuan blok iklan beberapa penyedia DNS, lalu pakai satu ketukan.
 - Impor paket ikon (.zip PNG/WebP/JPG) di Setelan > Ikon, tampil di galeri, bisa dihapus dan dipakai tebak otomatis.
 - Widget Android asli (jam, cuaca, dll), folder, dock, sembunyikan aplikasi.
 - Daftar aplikasi gaya daftar (dengan indeks huruf) atau kotak, filter, pencarian.

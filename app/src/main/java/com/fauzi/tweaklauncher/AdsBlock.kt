@@ -114,6 +114,7 @@ fun AdsBlockCard(vm: MainVm) {
         }
         if (vm.adsMsg.isNotEmpty()) Text(vm.adsMsg, color = Pal.soft, fontSize = 12.sp)
         if (cur.isNotBlank()) Text("Status sistem: $cur", color = Pal.sub, fontSize = 11.sp)
+        DnsTestBlock(vm)
         Text(
             "Jika kamu memakai VPN lain (mis. 1.1.1.1), DNS dari VPN itu yang dipakai dan blok iklan ini tidak berlaku selama VPN menyala.",
             color = Pal.sub, fontSize = 12.sp
