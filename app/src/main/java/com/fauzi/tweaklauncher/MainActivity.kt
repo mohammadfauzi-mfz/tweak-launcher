@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WidgetHost.init(applicationContext)
+        if (vm.cfg.lockOn) vm.syncLock()
         Firewall.sync(applicationContext, vm.cfg)
         if (vm.cfg.fwOn && vm.cfg.fwEngine == "shizuku") vm.fwRefresh(applicationContext)
         enableEdgeToEdge(

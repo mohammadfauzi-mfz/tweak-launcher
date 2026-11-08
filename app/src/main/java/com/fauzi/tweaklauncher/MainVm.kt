@@ -554,6 +554,32 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun openOverlayPermission() {
+        startSettings(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${app.packageName}")))
+    }
+
+    fun syncLock() {
+        if (cfg.lockOn) {
+            try {
+                ContextCompat.startForegroundService(app, Intent(app, LockService::class.java))
+            } catch (e: Exception) {
+                toast("Gagal memulai layar kunci: ${e.message}")
+            }
+        } else {
+            app.stopService(Intent(app, LockService::class.java))
+        }
+    }
+
+    fun setLock(on: Boolean) {
+        if (on && !Settings.canDrawOverlays(app) && Shell.state() != ShizukuState.READY) {
+            toast("Izinkan 'Tampil di atas aplikasi lain' (atau aktifkan Shizuku), lalu aktifkan lagi.")
+            startSettings(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${app.packageName}")))
+            return
+        }
+        cfg.lockOn = on
+        syncLock()
+    }
+
     fun setOverlay(on: Boolean) {
         if (on && !Settings.canDrawOverlays(app)) {
             toast("Izinkan 'Tampil di atas aplikasi lain', lalu aktifkan lagi.")

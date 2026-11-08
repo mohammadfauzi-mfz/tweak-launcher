@@ -227,6 +227,9 @@ class BootReceiver : BroadcastReceiver() {
             if (cfg.overlayOn || cfg.autoApp || cfg.autoSched) {
                 ContextCompat.startForegroundService(context, Intent(context, TweakService::class.java))
             }
+            if (cfg.lockOn) {
+                ContextCompat.startForegroundService(context, Intent(context, LockService::class.java))
+            }
         } catch (e: Exception) {
         }
     }

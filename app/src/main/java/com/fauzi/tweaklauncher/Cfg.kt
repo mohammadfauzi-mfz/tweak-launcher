@@ -99,6 +99,7 @@ class Cfg(ctx: Context) {
     var adsProvider by s("adsProv", "adguard")
     var adsCustom by s("adsCustom", "")
     var careFold by s("careFold", "")
+    var lockOn by s("lockOn", false)
     var adsPrevMode by s("adsPrevMode", "")
     var adsPrevHost by s("adsPrevHost", "")
     var fwOn by s("fwOn", false)
