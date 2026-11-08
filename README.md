@@ -63,3 +63,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Paksa refresh rate belum tentu didukung semua HP; jika gagal, aplikasi menampilkan pesan.
 - Tanpa root tidak bisa mengubah governor CPU. Tidak ada "RAM booster" karena justru memperlambat.
 - Layar kunci Windows 95 di atas lockscreen HP (Setelan > Layar kunci): jam, tombol OK dan geser ke atas membuka kunci asli, bisa dimatikan.
+- Tambah gambar PNG satuan ke paket ikon impor (atau paket baru "Ikon_saya") di Setelan > Ikon > Impor paket ikon.

@@ -249,6 +249,47 @@ object IconPack {
         return pack to widths.size
     }
 
+    /** Tambahkan gambar satuan ke sebuah paket (dibuat jika belum ada). Mengembalikan (berhasil, gagal). */
+    fun addImages(ctx: Context, pack: String, uris: List<Uri>): Pair<Int, Int> {
+        val p = clean(pack).take(40)
+        val dir = File(packRoot(ctx), p)
+        dir.mkdirs()
+        var ok = 0
+        var bad = 0
+        for (u in uris) {
+            try {
+                val name = clean(displayName(ctx, u).substringBeforeLast('.').ifEmpty { "ikon" })
+                val b = ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } ?: throw IllegalStateException()
+                if (b.size > 12_000_000) throw IllegalStateException()
+                val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(b, 0, b.size, o)
+                var sample = 1
+                while (o.outWidth / sample > 1024 || o.outHeight / sample > 1024) sample *= 2
+                var bmp = BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = sample })
+                    ?: throw IllegalStateException()
+                val m = maxOf(bmp.width, bmp.height)
+                if (m > 512) {
+                    val f = 512f / m
+                    bmp = Bitmap.createScaledBitmap(bmp, (bmp.width * f).toInt().coerceAtLeast(1), (bmp.height * f).toInt().coerceAtLeast(1), true)
+                }
+                File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                cache.remove("$p/$name")
+                ok++
+            } catch (e: Exception) {
+                bad++
+            }
+        }
+        if (ok == 0 && (dir.listFiles()?.isEmpty() == true)) dir.delete()
+        return ok to bad
+    }
+
+    /** Hapus satu ikon dari paket impor. */
+    fun removeIcon(ctx: Context, name: String) {
+        if (!name.contains('/') || name.contains("..")) return
+        File(packRoot(ctx), "$name.png").delete()
+        cache.remove(name)
+    }
+
     /** Tebak ikon dari nama berkas paket impor: kata nama aplikasi dicocokkan dengan nama berkas. */
     fun guessIn(label: String, pkg: String, names: List<String>): String? {
         val words = (label.lowercase().split(Regex("[^a-z0-9]+")) + pkg.lowercase().split('.'))
@@ -308,6 +349,16 @@ fun MainVm.guessIcons(ctx: Context, pack: String? = null): Int {
     }
     cfg.appIconsJson = Store.mapJson(m)
     return n
+}
+
+fun MainVm.addIconImages(ctx: Context, pack: String, uris: List<Uri>) {
+    packMsg = "Menambahkan gambar..."
+    viewModelScope.launch {
+        val r = withContext(Dispatchers.IO) { IconPack.addImages(ctx, pack, uris) }
+        packMsg = if (r.first == 0) "Gagal: gambar tidak bisa dibaca."
+        else "${r.first} gambar masuk ke paket \"$pack\"" + if (r.second > 0) ", ${r.second} gagal." else "."
+        packRev++
+    }
 }
 
 fun MainVm.importIconPack(ctx: Context, uri: Uri) {
@@ -502,10 +553,23 @@ fun ImportPackCard(vm: MainVm) {
     val zip = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.importIconPack(ctx, uri)
     }
+    var target by remember { mutableStateOf("Ikon_saya") }
+    val imgs = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) vm.addIconImages(ctx, target, uris)
+    }
     FoldCard("set_import", "Impor paket ikon (.zip)", "${packs.size} paket diimpor", defaultOpen = false) {
         Hint("Pilih berkas .zip berisi gambar PNG, WebP, atau JPG. Berkas .ico tidak bisa dibaca Android, ubah dulu ke PNG. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.")
         ActionButton("Impor paket ikon (.zip)", Modifier.fillMaxWidth(), primary = true) {
             zip.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream", "*/*"))
+        }
+        Text("Tambah gambar satuan ke paket", color = Pal.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Hint("Pilih paket tujuan, lalu pilih satu atau beberapa gambar PNG/WebP/JPG. Nama berkas jadi nama ikon (misalnya whatsapp.png), jadi tebak otomatis ikut mengenalinya. Nama yang sama menimpa ikon lama. Gambar besar dikecilkan ke 512 px.")
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val all = (packs + "Ikon_saya").distinct()
+            all.forEach { p -> Pill(if (p == "Ikon_saya" && p !in packs) "Ikon_saya (baru)" else p, target == p) { target = p } }
+        }
+        ActionButton("Tambah gambar ke \"$target\"", Modifier.fillMaxWidth()) {
+            imgs.launch(arrayOf("image/*"))
         }
         if (vm.packMsg.isNotEmpty()) Text(vm.packMsg, color = Pal.sub, fontSize = 12.sp)
         packs.forEach { p ->
