@@ -392,11 +392,11 @@ private fun PdaToday(vm: MainVm) {
         }
 
         PdaBox("PROGRAM") {
-            AppsGrid(vm)
+            AppsGrid(vm, fold = false)
         }
 
         if (vm.widgetIds.isNotEmpty()) {
-            PdaBox("WIDGET") { WidgetsBlock(vm) }
+            PdaBox("WIDGET") { WidgetsBlock(vm, fold = false) }
         }
     }
     }

@@ -130,9 +130,9 @@ fun ProfileCard(vm: MainVm) {
     val many = profiles.size > 3
     val ready = vm.shizuku == ShizukuState.READY
     val needPerm = vm.shizuku == ShizukuState.NEED_PERM
-    SCard {
+    FoldCard("home_profile", "Profil performa", "Mode ${current.label}") {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Profil performa", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text("Status Shizuku", color = Pal.sub, fontSize = 12.sp)
             if (ready) {
                 Text("Shizuku aktif", color = Green, fontSize = 12.sp)
             } else {
@@ -175,7 +175,7 @@ fun ProfileCard(vm: MainVm) {
 @Composable
 fun StatsCard(vm: MainVm) {
     val st = vm.stats
-    SCard {
+    FoldCard("home_stats", "Status HP", "RAM ${st.ramText} · Baterai ${st.battery}%") {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             StatBar("RAM", st.ramText, st.ramPct, Pal.accent, Modifier.weight(1f))
             StatBar("Baterai", "${st.battery}%", st.battery / 100f, Green, Modifier.weight(1f))
@@ -188,11 +188,14 @@ fun StatsCard(vm: MainVm) {
 }
 
 @Composable
-fun AppsGrid(vm: MainVm) {
+fun AppsGrid(vm: MainVm, fold: Boolean = true) {
     val cols = vm.cfg.homeCols.coerceIn(3, 6)
     val sl = vm.sleeping
+    val (open0, toggle) = rememberFold("home_apps", true)
+    val open = open0 || !fold
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        vm.homeEntries.chunked(cols).forEach { row ->
+        if (fold) FoldHeader("Aplikasi", "${vm.homeEntries.size} item", open, toggle)
+        if (open) vm.homeEntries.chunked(cols).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
                 row.forEach { e ->
                     when (e) {
@@ -207,11 +210,14 @@ fun AppsGrid(vm: MainVm) {
 }
 
 @Composable
-fun WidgetsBlock(vm: MainVm) {
+fun WidgetsBlock(vm: MainVm, fold: Boolean = true) {
     val ids = vm.widgetIds
+    val (open0, toggle) = rememberFold("home_widgets", true)
+    val open = open0 || !fold
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ids.forEach { id -> WidgetView(id) }
-        if (ids.isEmpty()) {
+        if (fold) FoldHeader("Widget", "${ids.size} widget", open, toggle)
+        if (open) ids.forEach { id -> WidgetView(id) }
+        if (open && ids.isEmpty()) {
             ActionButton("Tambah widget", Modifier.fillMaxWidth()) { vm.showWidgetPicker = true }
         }
     }

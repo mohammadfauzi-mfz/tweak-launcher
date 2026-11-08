@@ -173,7 +173,7 @@ private fun XpDesktop(vm: MainVm) {
                 ) { l, k, m, c -> XpShortcut(l, k, m, c) }
                 if (vm.widgetIds.isNotEmpty()) {
                     Box(Modifier.width(190.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(8.dp)) {
-                        WidgetsBlock(vm)
+                        WidgetsBlock(vm, fold = false)
                     }
                 }
             }

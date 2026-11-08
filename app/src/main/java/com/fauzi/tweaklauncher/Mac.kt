@@ -289,7 +289,7 @@ private fun MacDesktop(vm: MainVm) {
                 ) { l, k, mod, c -> MacShortcut(l, k, mod, c) }
                 if (vm.widgetIds.isNotEmpty()) {
                     Box(Modifier.width(190.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(8.dp)) {
-                        WidgetsBlock(vm)
+                        WidgetsBlock(vm, fold = false)
                     }
                 }
             }
