@@ -48,6 +48,7 @@ private val PAGES = listOf(
     Triple("layar", "Layar (DPI dan resolusi)", "Atur DPI dan resolusi dengan konfirmasi"),
     Triple("alat", "Alat", "Bersihkan cache, optimasi, tidurkan aplikasi"),
     Triple("cadangan", "Cadangan", "Ekspor dan impor pengaturan"),
+    Triple("game", "Folder Game", "Isi folder Game di menu Start Win95/XP"),
     Triple("kunci", "Layar kunci", "Lockscreen sesuai mode di atas kunci HP"),
     Triple("update", "Pembaruan", "Periksa dan pasang versi baru"),
     Triple("tentang", "Tentang", "Versi dan status")
@@ -93,6 +94,7 @@ fun SettingsScreen(vm: MainVm) {
                 "layar" -> DisplayPage(vm)
                 "alat" -> ToolsPage(vm)
                 "cadangan" -> BackupPage(vm)
+                "game" -> GamePage(vm)
                 "kunci" -> LockPage(vm)
                 "update" -> UpdatePage(vm)
                 "tentang" -> AboutPage(vm)
@@ -528,6 +530,38 @@ private fun BackupPage(vm: MainVm) {
         }
         ActionButton("Impor pengaturan", Modifier.fillMaxWidth()) {
             importL.launch(arrayOf("application/json", "text/plain", "*/*"))
+        }
+    }
+}
+
+// ---------------------------------------------------------------- Folder Game
+
+@Composable
+private fun GamePage(vm: MainVm) {
+    val cfg = vm.cfg
+    val chosen = Sys.list(cfg.gameApps).toSet()
+    val apps = remember(vm.apps) { vm.apps.sortedWith(compareByDescending<AppItem> { it.gameCat }.thenBy { it.label.lowercase() }) }
+    FoldCard("set_gamebuiltin", "Game bawaan", "Minesweeper dan Solitaire") {
+        Text("Minesweeper dan Solitaire selalu ada di folder Game (Start > Game) untuk mode Windows 95 dan XP. Jendelanya mengambang dan bisa digeser dengan menahan bar judul.", color = Pal.sub, fontSize = 12.sp)
+    }
+    FoldCard("set_gameapps", "Game Anda di folder Game", "${chosen.size} dipilih") {
+        Hint("Centang aplikasi yang mau muncul di folder Game, di bawah Minesweeper dan Solitaire. Aplikasi yang terdeteksi sebagai game ada di urutan atas.")
+        apps.forEach { a ->
+            Row(
+                Modifier.fillMaxWidth().clickable {
+                    val n = if (a.pkg in chosen) chosen - a.pkg else chosen + a.pkg
+                    cfg.gameApps = Sys.join(n)
+                },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AppIcon(a, 28.dp, badge = false)
+                Text(a.label, color = Pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                androidx.compose.material3.Checkbox(
+                    checked = a.pkg in chosen,
+                    onCheckedChange = null
+                )
+            }
         }
     }
 }

@@ -100,6 +100,7 @@ class Cfg(ctx: Context) {
     var adsCustom by s("adsCustom", "")
     var careFold by s("careFold", "")
     var lockOn by s("lockOn", false)
+    var gameApps by s("gameApps", "")
     var adsPrevMode by s("adsPrevMode", "")
     var adsPrevHost by s("adsPrevHost", "")
     var fwOn by s("fwOn", false)

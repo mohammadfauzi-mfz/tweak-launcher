@@ -111,6 +111,7 @@ fun W95Frame(vm: MainVm) {
             val imeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
             if (!imeOpen) W95Taskbar(vm)
         }
+        GameLayer(vm, xp = false)
         if (vm.w95Start) W95StartMenu(vm)
         if (vm.clockOpen) ClockPopup(vm, 0, TASKBAR_H)
         if (vm.trayPop.isNotEmpty()) W95TrayPopup(vm, TASKBAR_H)
@@ -451,6 +452,21 @@ private fun W95Banner(modifier: Modifier) {
 }
 
 @Composable
+private fun W95GameRow(label: String, mines: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        if (mines) MinesIcon(24.dp) else CardsIcon(24.dp)
+        Text(label, color = Color.Black, fontSize = 13.sp, maxLines = 1)
+    }
+}
+
+@Composable
 private fun W95SubApp(a: AppItem, onClick: () -> Unit) {
     Row(
         Modifier
@@ -484,6 +500,7 @@ private fun BoxScopeStart(vm: MainVm) {
             W95Banner(Modifier.width(28.dp).fillMaxHeight())
             Column(Modifier.weight(1f)) {
                 W95MenuRow("Program", 1, arrow = true, active = sub == 1) { sub = if (sub == 1) 0 else 1 }
+                W95MenuRow("Game", 1, arrow = true, active = sub == 3) { sub = if (sub == 3) 0 else 3 }
                 W95MenuRow("Komputer Saya", 0) { vm.w95Open(Screen.Care) }
                 W95MenuRow("Setelan", 2, arrow = true, active = sub == 2) { sub = if (sub == 2) 0 else 2 }
                 W95MenuRow("Cari...", 1) { vm.w95Open(Screen.Drawer) }
@@ -509,6 +526,20 @@ private fun BoxScopeStart(vm: MainVm) {
                 if (sub == 1) {
                     if (apps.isEmpty()) Text("Belum ada aplikasi", color = Color.Black, fontSize = 13.sp, modifier = Modifier.padding(8.dp))
                     apps.forEach { a ->
+                        W95SubApp(a) {
+                            vm.w95Start = false
+                            vm.launchApp(a.pkg)
+                        }
+                    }
+                } else if (sub == 3) {
+                    W95GameRow("Minesweeper", true) { vm.openGame("mines") }
+                    W95GameRow("Solitaire", false) { vm.openGame("sol") }
+                    val mine = remember(vm.apps, vm.cfg.gameApps) {
+                        val set = Sys.list(vm.cfg.gameApps).toSet()
+                        apps.filter { it.pkg in set }
+                    }
+                    if (mine.isNotEmpty()) W95MenuLine()
+                    mine.forEach { a ->
                         W95SubApp(a) {
                             vm.w95Start = false
                             vm.launchApp(a.pkg)

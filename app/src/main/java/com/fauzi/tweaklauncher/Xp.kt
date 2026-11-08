@@ -90,6 +90,7 @@ fun XpFrame(vm: MainVm) {
             val imeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
             if (!imeOpen) XpTaskbar(vm)
         }
+        GameLayer(vm, xp = true)
         if (vm.w95Start) XpStartMenu(vm)
         if (vm.clockOpen) ClockPopup(vm, 1, XP_BAR_H)
         if (vm.trayPop.isNotEmpty()) W95TrayPopup(vm, XP_BAR_H, xp = true)
@@ -401,6 +402,8 @@ private fun XpAppRow(a: AppItem, icon: androidx.compose.ui.unit.Dp, onClick: () 
 private fun XpStartPanel(vm: MainVm) {
     LaunchedEffect(Unit) { vm.loadUsage() }
     var showAll by remember { mutableStateOf(false) }
+    var showGames by remember { mutableStateOf(false) }
+    val gameSet = remember(vm.cfg.gameApps) { Sys.list(vm.cfg.gameApps).toSet() }
     val allApps = remember(vm.apps) { vm.apps.sortedBy { it.label.lowercase() } }
     val shape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
     Column(
@@ -426,7 +429,38 @@ private fun XpStartPanel(vm: MainVm) {
         }
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Column(Modifier.weight(1f).fillMaxHeight().background(Color.White).padding(vertical = 4.dp)) {
-                if (showAll) {
+                if (showGames) {
+                    Row(
+                        Modifier.fillMaxWidth().clickable { vm.openGame("mines") }.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        MinesIcon(24.dp)
+                        Text("Minesweeper", color = Color.Black, fontSize = 13.sp)
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().clickable { vm.openGame("sol") }.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CardsIcon(24.dp)
+                        Text("Solitaire", color = Color.Black, fontSize = 13.sp)
+                    }
+                    Column(Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
+                        allApps.filter { it.pkg in gameSet }.forEach { a -> XpAppRow(a, 24.dp) {
+                            vm.w95Start = false
+                            vm.launchApp(a.pkg)
+                        } }
+                    }
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).height(1.dp).background(Color(0xFFD0D0D0)))
+                    Text(
+                        "\u25C0  Kembali",
+                        color = Color.Black,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth().clickable { showGames = false }.padding(horizontal = 10.dp, vertical = 9.dp)
+                    )
+                } else if (showAll) {
                     Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
                         allApps.forEach { a -> XpAppRow(a, 24.dp) {
                             vm.w95Start = false
@@ -465,6 +499,10 @@ private fun XpStartPanel(vm: MainVm) {
                     vm.w95Open(Screen.Settings)
                 }
                 XpMenuRow("Cari", 1, bold = true) { vm.w95Open(Screen.Drawer) }
+                XpMenuRow("Game", 1, bold = true) {
+                    showAll = false
+                    showGames = true
+                }
             }
         }
         Row(

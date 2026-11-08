@@ -49,6 +49,9 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
 
     var screen by mutableStateOf(Screen.Home)
     var pdaStart by mutableStateOf(false)
+    val gameWins = mutableStateListOf<GameWin>()
+    var gameZ = 0
+    var gameCounter = 0
     var iconPick by mutableStateOf<IconTarget?>(null)
     var clockOpen by mutableStateOf(false)
     var symOpts by mutableStateOf(false)
