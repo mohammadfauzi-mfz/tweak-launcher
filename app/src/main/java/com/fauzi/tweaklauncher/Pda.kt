@@ -249,21 +249,28 @@ private fun PdaSilk(vm: MainVm) {
 // ---------------------------------------------------------------- Komponen
 
 @Composable
-private fun PdaBox(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun PdaBox(title: String, id: String, summary: String = "", content: @Composable ColumnScope.() -> Unit) {
+    val (open, toggle) = rememberFold(id, true)
     Column(
         Modifier
             .fillMaxWidth()
             .border(1.dp, Pal.text)
             .background(Pal.card)
     ) {
-        Text(
-            title,
-            color = Pal.bg,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth().background(Pal.text).padding(horizontal = 8.dp, vertical = 3.dp)
-        )
-        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+        Row(
+            Modifier.fillMaxWidth().background(Pal.text).clickable(onClick = toggle)
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (!open && summary.isNotBlank()) "$title: $summary" else title,
+                color = Pal.bg, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Text(if (open) "[-]" else "[+]", color = Pal.bg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        if (open) Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
     }
 }
 
@@ -342,13 +349,13 @@ private fun PdaToday(vm: MainVm) {
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        PdaBox("HARI INI") {
+        PdaBox("HARI INI", "pda_today", time) {
             Text(time, color = Pal.text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
             Text(date, color = Pal.soft, fontSize = 13.sp)
             Text("Mode: ${current.label}", color = Pal.text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
 
-        PdaBox("PROFIL PERFORMA") {
+        PdaBox("PROFIL PERFORMA", "pda_profile", current.label) {
             vm.profiles.forEach { p ->
                 val sel = p.id == current.id
                 Row(
@@ -384,19 +391,19 @@ private fun PdaToday(vm: MainVm) {
             if (vm.busy) Text("Menerapkan profil...", color = Pal.soft, fontSize = 12.sp)
         }
 
-        PdaBox("SISTEM") {
+        PdaBox("SISTEM", "pda_sys", "RAM ${st.ramText} · Baterai ${st.battery}%") {
             PdaMeter("RAM", st.ramText, st.ramPct)
             PdaMeter("Baterai", "${st.battery}%", st.battery / 100f)
             PdaMeter("Suhu", st.tempText, st.tempPct)
             PdaMeter("Simpanan", "${(st.storagePct * 100).toInt()}%", st.storagePct)
         }
 
-        PdaBox("PROGRAM") {
+        PdaBox("PROGRAM", "pda_prog", "${vm.homeEntries.size} item") {
             AppsGrid(vm, fold = false)
         }
 
         if (vm.widgetIds.isNotEmpty()) {
-            PdaBox("WIDGET") { WidgetsBlock(vm, fold = false) }
+            PdaBox("WIDGET", "pda_widget", "${vm.widgetIds.size} widget") { WidgetsBlock(vm, fold = false) }
         }
     }
     }
