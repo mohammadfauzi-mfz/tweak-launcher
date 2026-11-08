@@ -399,10 +399,24 @@ private fun XpAppRow(a: AppItem, icon: androidx.compose.ui.unit.Dp, onClick: () 
 }
 
 @Composable
+private fun XpFolderRow(label: String, open: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        W95Icon(1, 24.dp)
+        Text(label, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(if (open) "\u25BC" else "\u25B6", color = Color(0xFF1E8A1E), fontSize = 11.sp)
+    }
+}
+
+@Composable
 private fun XpStartPanel(vm: MainVm) {
     LaunchedEffect(Unit) { vm.loadUsage() }
     var showAll by remember { mutableStateOf(false) }
     var showGames by remember { mutableStateOf(false) }
+    var openTab by remember { mutableStateOf("") }
     val gameSet = remember(vm.cfg.gameApps) { Sys.list(vm.cfg.gameApps).toSet() }
     val allApps = remember(vm.apps) { vm.apps.sortedBy { it.label.lowercase() } }
     val shape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
@@ -462,10 +476,31 @@ private fun XpStartPanel(vm: MainVm) {
                     )
                 } else if (showAll) {
                     Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
-                        allApps.forEach { a -> XpAppRow(a, 24.dp) {
-                            vm.w95Start = false
-                            vm.launchApp(a.pkg)
-                        } }
+                        val tabs = vm.allTabs().filter { it.id != "all" }
+                        tabs.forEach { t ->
+                            val list = vm.appsForTab(t.id)
+                            if (list.isNotEmpty()) {
+                                XpFolderRow(t.label, openTab == t.id) { openTab = if (openTab == t.id) "" else t.id }
+                                if (openTab == t.id) list.forEach { a ->
+                                    Box(Modifier.padding(start = 16.dp)) {
+                                        XpAppRow(a, 24.dp) {
+                                            vm.w95Start = false
+                                            vm.launchApp(a.pkg)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (tabs.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).height(1.dp).background(Color(0xFFD0D0D0)))
+                        XpFolderRow("Semua (${allApps.size})", openTab == "all") { openTab = if (openTab == "all") "" else "all" }
+                        if (openTab == "all") allApps.forEach { a ->
+                            Box(Modifier.padding(start = 16.dp)) {
+                                XpAppRow(a, 24.dp) {
+                                    vm.w95Start = false
+                                    vm.launchApp(a.pkg)
+                                }
+                            }
+                        }
                     }
                     Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).height(1.dp).background(Color(0xFFD0D0D0)))
                     Text(
