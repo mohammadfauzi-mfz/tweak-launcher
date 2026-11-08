@@ -80,7 +80,7 @@ fun SettingsScreen(vm: MainVm) {
             )
             Text(
                 PAGES.firstOrNull { it.first == page }?.second ?: "",
-                color = Pal.text, fontSize = 26.sp, fontWeight = FontWeight.Bold
+                color = Pal.text, fontSize = 30.sp, fontWeight = FontWeight.Bold
             )
             when (page) {
                 "tampilan" -> AppearancePage(vm)
@@ -136,7 +136,7 @@ private val SWATCHES = listOf("#C6F432", "#38E1FF", "#FF7A45", "#B58CFF", "#FF5D
 @Composable
 private fun AppearancePage(vm: MainVm) {
     val cfg = vm.cfg
-    SCard {
+    FoldCard("set_mode", "Mode tampilan", cfg.uiMode) {
         ChoiceRow(
             "Mode tampilan",
             listOf("modern" to "Modern", "pda" to "PDA (Palm + Pocket PC)", "win95" to "Windows 95", "xp" to "Windows XP", "dos" to "DOS (terminal)", "mac" to "Mac OS klasik", "wp" to "Windows Phone", "sym" to "Symbian (Nokia S60)"),
@@ -157,14 +157,14 @@ private fun AppearancePage(vm: MainVm) {
     }
     WallpaperCard(vm)
     WpAccentCard(vm)
-    SCard {
+    FoldCard("set_preset", "Tema siap pakai", defaultOpen = false) {
         ChoiceRow(
             "Tema siap pakai",
             listOf("lime" to "Lime Noir", "cyan" to "Cyan Night", "sunset" to "Sunset", "violet" to "Violet Kaca", "light" to "Terang Bersih"),
             ""
         ) { applyPreset(cfg, it) }
     }
-    SCard {
+    FoldCard("set_color", "Warna dan font", "Aksen ${cfg.accent}", defaultOpen = false) {
         ChoiceRow("Mode tema", listOf("amoled" to "AMOLED", "dark" to "Gelap", "light" to "Terang"), cfg.theme) { cfg.theme = it }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Warna aksen", color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
@@ -195,7 +195,7 @@ private fun AppearancePage(vm: MainVm) {
             cfg.font
         ) { cfg.font = it }
     }
-    SCard {
+    FoldCard("set_bg", "Latar dan kartu", defaultOpen = false) {
         ChoiceRow("Latar", listOf("solid" to "Warna polos", "wallpaper" to "Wallpaper sistem"), cfg.background) { cfg.background = it }
         if (cfg.background == "wallpaper") {
             IntSlider("Redupkan latar", "%", cfg.dim, 0, 90) { cfg.dim = it }
@@ -211,8 +211,7 @@ private fun AppearancePage(vm: MainVm) {
 private fun HomePage(vm: MainVm) {
     val cfg = vm.cfg
     val secs = Layout.parse(cfg.homeSections)
-    SCard {
-        SectionLabel("Bagian Beranda (urutan dan tampil)")
+    FoldCard("set_secs", "Bagian Beranda (urutan dan tampil)", defaultOpen = false) {
         secs.forEachIndexed { i, (k, on) ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(Layout.NAMES[k] ?: k, color = Pal.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
@@ -241,7 +240,7 @@ private fun HomePage(vm: MainVm) {
             }
         }
     }
-    SCard {
+    FoldCard("set_clock", "Jam dan susunan", defaultOpen = false) {
         ChoiceRow(
             "Gaya jam",
             listOf("large" to "Besar", "small" to "Kecil", "hidden" to "Sembunyi"),
@@ -252,8 +251,7 @@ private fun HomePage(vm: MainVm) {
         IntSlider("Kolom aplikasi di Beranda", "", cfg.homeCols, 3, 6) { cfg.homeCols = it }
         SwitchRow("Dock di bawah", "Tahan lama aplikasi lalu pilih Taruh di dock (maks 5)", cfg.dockOn) { cfg.dockOn = it }
     }
-    SCard {
-        SectionLabel("Widget")
+    FoldCard("set_widget", "Widget", "${vm.widgetIds.size} widget", defaultOpen = false) {
         val ctx = LocalContext.current
         val ids = vm.widgetIds
         if (ids.isEmpty()) Text("Belum ada widget.", color = Pal.sub, fontSize = 13.sp)
@@ -277,7 +275,7 @@ private fun HomePage(vm: MainVm) {
 @Composable
 private fun IconsPage(vm: MainVm) {
     val cfg = vm.cfg
-    SCard {
+    FoldCard("set_icon", "Bentuk dan ukuran ikon", cfg.iconShape) {
         ChoiceRow(
             "Bentuk ikon",
             listOf("squircle" to "Squircle", "circle" to "Bulat", "rounded" to "Kotak membulat", "square" to "Kotak", "teardrop" to "Tetesan"),
@@ -290,7 +288,7 @@ private fun IconsPage(vm: MainVm) {
         SwitchRow("Tampilkan nama aplikasi", null, cfg.showLabels) { cfg.showLabels = it }
         if (cfg.showLabels) IntSlider("Ukuran teks nama", " sp", cfg.labelSize, 10, 15) { cfg.labelSize = it }
     }
-    SCard {
+    FoldCard("set_badge", "Badge notifikasi", if (cfg.badgeOn) "Aktif" else "Mati", defaultOpen = false) {
         SwitchRow("Badge notifikasi", "Titik atau angka di ikon aplikasi yang punya notifikasi", cfg.badgeOn) {
             cfg.badgeOn = it
             if (it && !vm.notifAccess) vm.openNotifAccess()
@@ -312,7 +310,7 @@ private fun IconsPage(vm: MainVm) {
             Text("Untuk mematikan badge satu aplikasi, tahan lama aplikasinya lalu pilih Badge.", color = Pal.sub, fontSize = 12.sp)
         }
     }
-    SCard {
+    FoldCard("set_drawer", "Daftar aplikasi", defaultOpen = false) {
         ChoiceRow("Gaya daftar aplikasi", listOf("list" to "Daftar", "grid" to "Kotak"), cfg.drawerStyle) { cfg.drawerStyle = it }
         if (cfg.drawerStyle == "grid") IntSlider("Kolom daftar", "", cfg.drawerCols, 3, 6) { cfg.drawerCols = it }
         SwitchRow("Tampilkan aplikasi tersembunyi", "Di tab Semua", cfg.showHidden) { cfg.showHidden = it }
@@ -345,7 +343,7 @@ private fun ProfilesPage(vm: MainVm) {
     val cfg = vm.cfg
     val profiles = vm.profiles
     profiles.forEachIndexed { i, p ->
-        SCard {
+        FoldCard("set_prof_${p.id}", p.label.ifBlank { "Profil ${i + 1}" }, "Animasi ${p.anim}x · refresh ${p.refresh}", defaultOpen = false) {
             InputBox(p.label, { v ->
                 vm.saveProfiles(profiles.mapIndexed { j, x -> if (j == i) p.copy(label = v) else x })
             }, "Nama profil")
@@ -393,7 +391,7 @@ private fun ProfilesPage(vm: MainVm) {
 private fun AutomationPage(vm: MainVm) {
     val cfg = vm.cfg
     val profiles = vm.profiles
-    SCard {
+    FoldCard("set_autoapp", "Profil otomatis", if (cfg.autoApp) "Aktif" else "Mati", defaultOpen = false) {
         SwitchRow(
             "Profil otomatis per aplikasi",
             "Memantau aplikasi di layar lewat layanan latar. Butuh izin Akses penggunaan dan Shizuku.",
@@ -404,7 +402,7 @@ private fun AutomationPage(vm: MainVm) {
             color = Pal.sub, fontSize = 12.sp
         )
     }
-    SCard {
+    FoldCard("set_sched", "Jadwal profil", if (cfg.autoSched) "Aktif" else "Mati", defaultOpen = false) {
         SwitchRow("Jadwal profil", "Contoh: mode Hemat tiap malam. Jadwal menimpa profil manual.", cfg.autoSched) { vm.setAutoSched(it) }
         StepRow(
             "Mulai", fmtTime(cfg.schedStart),
@@ -418,7 +416,7 @@ private fun AutomationPage(vm: MainVm) {
         )
         ChoiceRow("Profil saat jadwal", profiles.map { it.id to it.label }, cfg.schedProfile) { cfg.schedProfile = it }
     }
-    SCard {
+    FoldCard("set_overlay", "Overlay monitor", if (cfg.overlayOn) "Aktif" else "Mati", defaultOpen = false) {
         SwitchRow(
             "Overlay monitor",
             "Layar (Hz), RAM, suhu, baterai di atas aplikasi lain. Butuh izin Tampil di atas aplikasi lain.",
@@ -432,8 +430,7 @@ private fun AutomationPage(vm: MainVm) {
         IntSlider("Kepekatan overlay", "%", cfg.overlayAlpha, 20, 100) { cfg.overlayAlpha = it }
     }
     val rules = Store.map(cfg.appProfilesJson)
-    SCard {
-        SectionLabel("Aplikasi dengan profil khusus")
+    FoldCard("set_rules", "Aplikasi dengan profil khusus", "${rules.size} aplikasi", defaultOpen = false) {
         if (rules.isEmpty()) Text("Belum ada.", color = Pal.sub, fontSize = 13.sp)
         rules.forEach { (pkg, pid) ->
             val name = vm.apps.firstOrNull { it.pkg == pkg }?.label ?: pkg
@@ -456,7 +453,7 @@ private fun DisplayPage(vm: MainVm) {
     LaunchedEffect(Unit) { vm.refreshDisplay() }
     val d = vm.display
     val ok = vm.shizuku == ShizukuState.READY && d.curDpi > 0
-    SCard {
+    FoldCard("set_dstat", "Status layar", "${d.curDpi} dpi") {
         if (vm.shizuku != ShizukuState.READY) {
             Text("Butuh Shizuku aktif.", color = Orange, fontSize = 13.sp)
         }
@@ -469,7 +466,7 @@ private fun DisplayPage(vm: MainVm) {
             color = Pal.sub, fontSize = 12.sp
         )
     }
-    SCard {
+    FoldCard("set_dpi", "DPI", "${d.curDpi}", defaultOpen = false) {
         StepRow(
             "DPI", "${d.curDpi}",
             { if (ok) vm.setDensity(d.curDpi - 20) },
@@ -477,8 +474,7 @@ private fun DisplayPage(vm: MainVm) {
         )
         ActionButton("Reset DPI", Modifier.fillMaxWidth(), enabled = ok) { vm.resetDensity() }
     }
-    SCard {
-        Text("Resolusi", color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+    FoldCard("set_res", "Resolusi", defaultOpen = false) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(100, 85, 75, 60).forEach { pct ->
                 ActionButton("$pct%", Modifier.weight(1f), enabled = ok && d.physSize.isNotEmpty()) { vm.setScale(pct) }
@@ -494,8 +490,7 @@ private fun DisplayPage(vm: MainVm) {
 @Composable
 private fun ToolsPage(vm: MainVm) {
     val sleeping = vm.sleeping
-    SCard {
-        Text("Pemeliharaan (butuh Shizuku)", color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+    FoldCard("set_maint", "Pemeliharaan (butuh Shizuku)") {
         ActionButton("Bersihkan cache semua aplikasi", Modifier.fillMaxWidth()) {
             vm.runTool("Membersihkan cache") { Tweaks.trimCaches() }
         }
@@ -503,8 +498,7 @@ private fun ToolsPage(vm: MainVm) {
             vm.runTool("Menjalankan optimasi") { Tweaks.dexoptAll() }
         }
     }
-    SCard {
-        Text("Tidurkan aplikasi jarang dipakai", color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+    FoldCard("set_sleep", "Tidurkan aplikasi jarang dipakai", "${sleeping.size} tertidur", defaultOpen = false) {
         Text(
             "Aplikasi yang ditidurkan dihentikan dan dilarang jalan di latar. Dibangunkan otomatis saat dibuka dari launcher. Aplikasi sistem tidak ikut.",
             color = Pal.sub, fontSize = 12.sp

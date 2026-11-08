@@ -135,8 +135,7 @@ fun WallpaperCard(vm: MainVm) {
             cfg.setWallpaper(mode, "image:" + System.currentTimeMillis())
         }
     }
-    SCard {
-        Text("Wallpaper desktop", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    FoldCard("set_wall", "Wallpaper desktop", defaultOpen = false) {
         ChoiceRow(
             "Latar",
             listOf("default" to "Bawaan", "color" to "Warna", "image" to "Foto", "system" to "Wallpaper HP"),

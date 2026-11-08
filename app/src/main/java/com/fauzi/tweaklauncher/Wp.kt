@@ -658,8 +658,7 @@ private fun WpApps(vm: MainVm) {
 fun WpAccentCard(vm: MainVm) {
     val cfg = vm.cfg
     if (cfg.uiMode != "wp") return
-    SCard {
-        Text("Tema Windows Phone", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    FoldCard("set_wptheme", "Tema Windows Phone", defaultOpen = false) {
         ChoiceRow("Latar", listOf("dark" to "Gelap", "light" to "Terang"), if (cfg.wpLight) "light" else "dark") { cfg.wpLight = it == "light" }
         Text("Warna aksen", color = Pal.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         Text("Dipakai untuk ubin, huruf grup, dan tombol di mode Windows Phone.", color = Pal.sub, fontSize = 12.sp)

@@ -387,8 +387,7 @@ fun IconPackCard(vm: MainVm) {
     var msg by remember { mutableStateOf("") }
     val packs = remember(vm.packRev) { IconPack.packs(ctx) }
     var guessPack by remember { mutableStateOf("") }
-    SCard {
-        Text("Paket ikon Windows 98", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    FoldCard("set_pack", "Paket ikon Windows 98", defaultOpen = false) {
         Text(
             "Ganti ikon aplikasi dengan menahan lama aplikasinya lalu pilih Ikon. Atau tebak otomatis di bawah.",
             color = Pal.sub, fontSize = 12.sp
@@ -449,8 +448,7 @@ fun ImportPackCard(vm: MainVm) {
     val zip = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.importIconPack(ctx, uri)
     }
-    SCard {
-        Text("Impor paket ikon (.zip)", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    FoldCard("set_import", "Impor paket ikon (.zip)", "${packs.size} paket diimpor", defaultOpen = false) {
         Text(
             "Pilih berkas .zip berisi gambar PNG, WebP, atau JPG. Berkas .ico tidak bisa dibaca Android, ubah dulu ke PNG. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.",
             color = Pal.sub, fontSize = 12.sp
