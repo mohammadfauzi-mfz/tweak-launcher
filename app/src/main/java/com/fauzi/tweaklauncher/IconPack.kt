@@ -65,8 +65,35 @@ object IconPack {
         "start" to "Logo Start (Win95 dan XP)",
         "mac0" to "Macintosh HD (Mac)",
         "mac1" to "Program (Mac)",
-        "mac2" to "Panel Kontrol (Mac)"
+        "mac2" to "Panel Kontrol (Mac)",
+        "sym1" to "Perawatan (Symbian)",
+        "sym2" to "Setelan (Symbian)"
     )
+
+    /** Kata kunci nama berkas untuk menebak ikon sistem dari paket impor, per peran. */
+    private val SYS_ROLE = mapOf(
+        "computer" to "computer", "mac0" to "computer",
+        "folder" to "folder", "mac1" to "folder",
+        "panel" to "panel", "mac2" to "panel",
+        "start" to "start", "sym1" to "care", "sym2" to "settings"
+    )
+    private val SYS_KEYS = mapOf(
+        "computer" to listOf("mycomputer", "computer", "desktop", "monitor", "pc"),
+        "folder" to listOf("folder", "directory", "programs", "program"),
+        "panel" to listOf("controlpanel", "control", "panel", "tools", "tool"),
+        "start" to listOf("start", "windows", "winlogo", "logo"),
+        "care" to listOf("perawatan", "maintenance", "care", "health", "battery", "heart", "tools"),
+        "settings" to listOf("settings", "setting", "pengaturan", "setelan", "gear", "config", "preferences", "options")
+    )
+
+    /** Tebak ikon untuk satu slot sistem dari daftar nama ikon sebuah paket. */
+    fun guessSysIn(slot: String, names: List<String>): String? {
+        val keys = SYS_KEYS[SYS_ROLE[slot]] ?: return null
+        val flat = names.map { it to it.substringAfter('/').lowercase().replace(Regex("[^a-z0-9]"), "") }
+        for (k in keys) flat.firstOrNull { it.second == k }?.let { return it.first }
+        for (k in keys) flat.firstOrNull { it.second.contains(k) }?.let { return it.first }
+        return null
+    }
 
     val DEFAULT_SYS = mapOf(
         "computer" to "computer_explorer",
@@ -295,6 +322,31 @@ fun MainVm.importIconPack(ctx: Context, uri: Uri) {
     }
 }
 
+/** Tebak ikon sistem launcher. Paket impor menimpa ikon yang cocok; Windows 98 hanya mengisi yang kosong. */
+fun MainVm.guessSysIcons(ctx: Context, pack: String? = null): Int {
+    val m = Store.map(cfg.sysIconsJson)
+    var n = 0
+    if (pack == null) {
+        IconPack.DEFAULT_SYS.forEach { (slot, name) ->
+            if (slot !in m) {
+                m[slot] = name
+                n++
+            }
+        }
+    } else {
+        val own = IconPack.packNames(ctx, pack)
+        IconPack.SYS_SLOTS.forEach { (slot, _) ->
+            val g = IconPack.guessSysIn(slot, own)
+            if (g != null) {
+                m[slot] = g
+                n++
+            }
+        }
+    }
+    cfg.sysIconsJson = Store.mapJson(m)
+    return n
+}
+
 fun MainVm.applyDefaultSys() {
     cfg.sysIconsJson = Store.mapJson(IconPack.DEFAULT_SYS)
 }
@@ -400,7 +452,8 @@ fun IconPackCard(vm: MainVm) {
         }
         ActionButton("Tebak ikon otomatis untuk semua aplikasi", Modifier.fillMaxWidth(), primary = true) {
             val n = vm.guessIcons(ctx, guessPack.ifEmpty { null })
-            msg = "$n aplikasi diberi ikon. Koreksi yang salah lewat tahan lama > Ikon."
+            val k = vm.guessSysIcons(ctx, guessPack.ifEmpty { null })
+            msg = "$n aplikasi dan $k ikon sistem diberi ikon. Koreksi yang salah lewat tahan lama > Ikon."
         }
         ActionButton("Hapus semua ikon aplikasi kustom", Modifier.fillMaxWidth()) {
             cfg.appIconsJson = "{}"
@@ -408,9 +461,13 @@ fun IconPackCard(vm: MainVm) {
         }
         if (msg.isNotEmpty()) Text(msg, color = Pal.sub, fontSize = 12.sp)
     }
-    SCard {
-        Text("Ikon sistem launcher", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Text("Dipakai di mode Windows 95, XP, dan Mac OS klasik. Ketuk untuk memilih.", color = Pal.sub, fontSize = 12.sp)
+    FoldCard("set_sysicons", "Ikon sistem launcher", defaultOpen = false) {
+        Text("Dipakai di mode Windows 95, XP, Mac OS klasik, dan Symbian. Ketuk untuk memilih.", color = Pal.sub, fontSize = 12.sp)
+        ActionButton("Tebak ikon sistem dari paket terpilih", Modifier.fillMaxWidth()) {
+            val k = vm.guessSysIcons(ctx, guessPack.ifEmpty { null })
+            msg = "$k ikon sistem diberi ikon."
+        }
+        if (msg.isNotEmpty()) Text(msg, color = Pal.sub, fontSize = 12.sp)
         IconPack.SYS_SLOTS.forEach { (slot, label) ->
             val cur = cfg.sysIcon(slot)
             val bmp = cur?.let { IconPack.get(ctx, it) }

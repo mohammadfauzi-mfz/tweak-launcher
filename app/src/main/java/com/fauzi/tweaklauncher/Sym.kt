@@ -348,6 +348,17 @@ private fun SymMenu(vm: MainVm) {
 
 @Composable
 private fun SymSysIcon(kind: Int, dp: Int) {
+    val cfg = LocalCfg.current
+    val ctx = LocalContext.current
+    val packBmp = cfg.sysIcon("sym$kind")?.let { IconPack.get(ctx, it) }
+    if (packBmp != null) {
+        androidx.compose.foundation.Image(
+            bitmap = packBmp,
+            contentDescription = null,
+            modifier = Modifier.size(dp.dp)
+        )
+        return
+    }
     Box(
         Modifier.size(dp.dp).clip(RoundedCornerShape(8.dp)).background(
             Brush.verticalGradient(if (kind == 1) listOf(Color(0xFF7CD65A), Color(0xFF2E8B1E)) else listOf(Color(0xFF9AA9BC), Color(0xFF4D5E75)))
