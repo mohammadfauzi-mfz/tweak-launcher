@@ -106,7 +106,7 @@ fun CareScreen(vm: MainVm) {
             Text("Profil aktif: ${vm.profile.label}", color = Pal.sub, fontSize = 14.sp)
         }
 
-        SCard {
+        FoldCard("health", "Kondisi HP", "$score · $label") {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("$score", color = scoreColor, fontSize = 56.sp, fontWeight = FontWeight.Light)
                 Column(Modifier.weight(1f)) {
@@ -124,8 +124,7 @@ fun CareScreen(vm: MainVm) {
             }
         }
 
-        SCard {
-            Text("Alat cepat", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        FoldCard("tools", "Alat cepat", "Cache, optimasi, tidurkan aplikasi") {
             ActionButton("Bersihkan cache", Modifier.fillMaxWidth(), primary = true) {
                 vm.runTool("Membersihkan cache") { Tweaks.trimCaches() }
             }
@@ -153,8 +152,7 @@ fun CareScreen(vm: MainVm) {
         AdsBlockCard(vm)
 
         if (!vm.usageOk) {
-            SCard {
-                Text("Favorit dan terakhir dipakai", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            FoldCard("usage", "Favorit dan terakhir dipakai", "Butuh akses penggunaan") {
                 Text(
                     "Beri akses penggunaan supaya launcher bisa menampilkan aplikasi yang paling sering dan terakhir kamu pakai.",
                     color = Pal.soft,
@@ -164,38 +162,30 @@ fun CareScreen(vm: MainVm) {
             }
         } else {
             if (vm.recentApps.isNotEmpty()) {
-                SCard {
-                    Text("Terakhir dipakai", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                FoldCard("recent", "Terakhir dipakai", "${vm.recentApps.size} aplikasi") {
                     Row(Modifier.horizontalScroll(rememberScrollState())) {
                         vm.recentApps.forEach { a -> AppTile(a, Modifier.width(76.dp), vm, a.pkg in sl) }
                     }
                 }
             }
             if (vm.oftenApps.isNotEmpty()) {
-                SCard {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Paling sering dipakai", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        Text("7 hari", color = Pal.sub, fontSize = 12.sp)
-                    }
+                FoldCard("often", "Paling sering dipakai (7 hari)", "${vm.oftenApps.size} aplikasi") {
                     Row(Modifier.horizontalScroll(rememberScrollState())) {
                         vm.oftenApps.forEach { a -> AppTile(a, Modifier.width(76.dp), vm, a.pkg in sl) }
                     }
                 }
             }
             if (vm.recentApps.isEmpty() && vm.oftenApps.isEmpty()) {
-                SCard {
-                    Text("Belum ada data pemakaian", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                FoldCard("nodata", "Belum ada data pemakaian") {
                     Text("Pakai beberapa aplikasi dulu, daftar akan terisi sendiri.", color = Pal.soft, fontSize = 13.sp)
                 }
             }
         }
 
         if (games.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Aplikasi Boost", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                Text("Profil Boost otomatis", color = Pal.sub, fontSize = 12.sp)
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val (boostOpen, boostToggle) = rememberFold("boost", true)
+            FoldHeader("Aplikasi Boost", "${games.size} aplikasi · profil Boost otomatis", boostOpen, boostToggle)
+            if (boostOpen) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 games.chunked(2).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         row.forEach { g -> GameCard(g, vm, Modifier.weight(1f)) }

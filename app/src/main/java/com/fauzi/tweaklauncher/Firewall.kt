@@ -319,8 +319,11 @@ fun FirewallCard(vm: MainVm) {
             Firewall.start(ctx)
         }
     }
-    SCard {
-        Text("Firewall (blok internet)", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    FoldCard(
+        "fw", "Firewall (blok internet)",
+        if (cfg.fwOn) "Aktif · $count aplikasi" else "Mati",
+        defaultOpen = false
+    ) {
         Text(
             "Pilih aplikasi yang tidak boleh memakai internet, semuanya, hanya Wi-Fi, atau hanya data seluler. Memakai VPN lokal di HP, datamu tidak dikirim ke mana pun.",
             color = Pal.soft, fontSize = 13.sp

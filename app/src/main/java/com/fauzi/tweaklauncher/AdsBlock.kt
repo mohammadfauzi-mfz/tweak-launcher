@@ -92,8 +92,11 @@ fun AdsBlockCard(vm: MainVm) {
                 Shell.run("settings get global private_dns_specifier").second.trim()
         }
     }
-    SCard {
-        Text("Blok iklan (DNS privat)", color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    FoldCard(
+        "ads", "Blok iklan (DNS privat)",
+        if (cfg.adsDnsOn) "Aktif · ${AdsBlock.host(cfg)}" else "Mati",
+        defaultOpen = false
+    ) {
         Text(
             "Memakai DNS pemfilter iklan dan pelacak untuk seluruh HP, lewat Shizuku, tanpa VPN. Tidak bisa dipilih per aplikasi. Iklan yang menyatu dengan konten (mis. video YouTube) tidak terblokir.",
             color = Pal.soft, fontSize = 13.sp

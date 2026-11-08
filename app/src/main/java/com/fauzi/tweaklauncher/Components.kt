@@ -1,7 +1,11 @@
 package com.fauzi.tweaklauncher
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -88,6 +92,62 @@ fun SCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
         verticalArrangement = Arrangement.spacedBy(14.dp),
         content = content
     )
+}
+
+/** Status buka/tutup satu bagian, disimpan di pengaturan. */
+@Composable
+fun rememberFold(id: String, defaultOpen: Boolean): Pair<Boolean, () -> Unit> {
+    val cfg = LocalCfg.current
+    val saved = Store.map(cfg.careFold)[id]
+    val open = if (saved == null) defaultOpen else saved == "1"
+    return open to {
+        val m = Store.map(cfg.careFold)
+        m[id] = if (open) "0" else "1"
+        cfg.careFold = Store.mapJson(m)
+    }
+}
+
+/** Judul bagian yang bisa diketuk untuk membuka atau menutup. */
+@Composable
+fun FoldHeader(title: String, summary: String, open: Boolean, onToggle: () -> Unit) {
+    val c = Pal.sub
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onToggle),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            if (!open && summary.isNotBlank()) Text(summary, color = Pal.sub, fontSize = 12.sp)
+        }
+        Spacer(Modifier.size(10.dp))
+        Canvas(Modifier.size(14.dp)) {
+            val w = size.width
+            val h = size.height
+            val p = Path()
+            if (open) {
+                p.moveTo(0f, h * 0.3f); p.lineTo(w / 2f, h * 0.7f); p.lineTo(w, h * 0.3f)
+            } else {
+                p.moveTo(w * 0.3f, 0f); p.lineTo(w * 0.7f, h / 2f); p.lineTo(w * 0.3f, h)
+            }
+            drawPath(p, c, style = Stroke(width = 2.dp.toPx()))
+        }
+    }
+}
+
+/** Kartu yang bisa diminimalkan. [summary] tampil saat tertutup. */
+@Composable
+fun FoldCard(
+    id: String,
+    title: String,
+    summary: String = "",
+    defaultOpen: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val (open, toggle) = rememberFold(id, defaultOpen)
+    SCard(Modifier.animateContentSize()) {
+        FoldHeader(title, summary, open, toggle)
+        if (open) content()
+    }
 }
 
 @Composable
