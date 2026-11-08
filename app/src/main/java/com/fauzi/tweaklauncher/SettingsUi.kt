@@ -48,7 +48,7 @@ private val PAGES = listOf(
     Triple("layar", "Layar (DPI dan resolusi)", "Atur DPI dan resolusi dengan konfirmasi"),
     Triple("alat", "Alat", "Bersihkan cache, optimasi, tidurkan aplikasi"),
     Triple("cadangan", "Cadangan", "Ekspor dan impor pengaturan"),
-    Triple("kunci", "Layar kunci", "Lockscreen Windows 95 di atas kunci HP"),
+    Triple("kunci", "Layar kunci", "Lockscreen sesuai mode di atas kunci HP"),
     Triple("update", "Pembaruan", "Periksa dan pasang versi baru"),
     Triple("tentang", "Tentang", "Versi dan status")
 )
@@ -539,8 +539,8 @@ private fun LockPage(vm: MainVm) {
     val cfg = vm.cfg
     val ctx = LocalContext.current
     val overlayOk = android.provider.Settings.canDrawOverlays(ctx)
-    FoldCard("set_lock", "Layar kunci Windows 95", if (cfg.lockOn) "Aktif" else "Mati") {
-        SwitchRow("Layar kunci Windows 95", "Tampil saat layar menyala, di atas lockscreen HP", cfg.lockOn) { vm.setLock(it) }
+    FoldCard("set_lock", "Layar kunci launcher", if (cfg.lockOn) "Aktif" else "Mati") {
+        SwitchRow("Layar kunci launcher", "Gaya mengikuti mode: Windows 95, XP, PDA, Mac (mode lain memakai Windows 95)", cfg.lockOn) { vm.setLock(it) }
         Hint("Ini lapisan tampilan, bukan pengganti kunci HP. Setelah menekan OK, lockscreen asli (PIN, pola, sidik jari) tetap muncul, jadi keamanan tidak berkurang. Butuh izin tampil di atas aplikasi lain, atau Shizuku aktif. Matikan saklar ini kapan saja untuk kembali ke lockscreen biasa.")
         Text(
             if (overlayOk) "Izin tampil di atas aplikasi lain: aktif" else "Izin tampil di atas aplikasi lain: belum (Shizuku bisa menggantikan)",

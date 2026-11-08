@@ -136,7 +136,7 @@ private fun PdaTitleBar(vm: MainVm) {
 }
 
 @Composable
-private fun PdaFlag(dp: Dp) {
+internal fun PdaFlag(dp: Dp) {
     Canvas(Modifier.size(dp)) {
         val w = this.size.width
         val g = w * 0.08f

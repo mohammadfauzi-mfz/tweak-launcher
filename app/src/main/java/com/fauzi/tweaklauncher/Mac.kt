@@ -60,7 +60,7 @@ private fun macTitle(s: Screen) = when (s) {
 }
 
 /** Garis hitam tipis berselang untuk bar judul jendela klasik. */
-private fun Modifier.stripes(): Modifier = this.drawBehind {
+internal fun Modifier.stripes(): Modifier = this.drawBehind {
     val step = 3.dp.toPx()
     var y = 2.dp.toPx()
     while (y < size.height - 2.dp.toPx()) {
@@ -69,13 +69,13 @@ private fun Modifier.stripes(): Modifier = this.drawBehind {
     }
 }
 
-private fun Modifier.macShadow(): Modifier = this.drawBehind {
+internal fun Modifier.macShadow(): Modifier = this.drawBehind {
     val o = 3.dp.toPx()
     drawRect(Color.Black, Offset(o, o), size)
 }
 
 @Composable
-private fun MacIcon(kind: Int, dp: Dp) {
+internal fun MacIcon(kind: Int, dp: Dp) {
     val cfg = LocalCfg.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val packBmp = cfg.sysIcon("mac$kind")?.let { IconPack.get(ctx, it) }

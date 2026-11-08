@@ -18,6 +18,9 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -102,6 +105,16 @@ private fun LockUi(cfg: Cfg, onUnlock: () -> Unit, onCancel: () -> Unit) {
     val loc = Locale("id", "ID")
     val time = SimpleDateFormat(if (cfg.clock24) "HH:mm" else "h:mm a", loc).format(Date(now))
     val date = SimpleDateFormat("EEEE, d MMMM yyyy", loc).format(Date(now))
+    when (cfg.uiMode) {
+        "xp" -> XpLock(time, date, onUnlock, onCancel)
+        "pda" -> PdaLock(time, date, onUnlock, onCancel)
+        "mac" -> MacLock(time, date, onUnlock, onCancel)
+        else -> Win95Lock(cfg, time, date, onUnlock, onCancel)
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun Win95Lock(cfg: Cfg, time: String, date: String, onUnlock: () -> Unit, onCancel: () -> Unit) {
     val spec = cfg.wp95.takeIf { it != "system" } ?: ""
     val wp = rememberWallpaper(spec, "win95")
 
@@ -183,6 +196,188 @@ private fun LockButton(text: String, bold: Boolean, onClick: () -> Unit) {
     }
 }
 
+private fun Modifier.unlockSwipe(onUnlock: () -> Unit): Modifier = this.swipes(onEnd = { d, _ ->
+    if (d.y < -220f && kotlin.math.abs(d.y) > kotlin.math.abs(d.x)) onUnlock()
+})
+
+// ---------------------------------------------------------------- Windows XP
+
+@androidx.compose.runtime.Composable
+private fun XpLock(time: String, date: String, onUnlock: () -> Unit, onCancel: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF00309C), Color(0xFF5A7EDC), Color(0xFF5A7EDC), Color(0xFF00309C))))
+            .unlockSwipe(onUnlock)
+    ) {
+        Spacer(Modifier.statusBarsPadding().height(64.dp))
+        Box(Modifier.fillMaxWidth().height(2.dp).background(Color(0xFFB9C8F2)))
+        Column(
+            Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                W95Icon(3, 44.dp)
+                Column {
+                    Text("Microsoft", color = Color.White, fontSize = 12.sp)
+                    Text("Windows xp", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(28.dp))
+            Row(
+                Modifier
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                    .background(Color(0x33FFFFFF))
+                    .clickable(onClick = onUnlock)
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    Modifier
+                        .size(56.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                        .background(Color(0xFFECE9D8)),
+                    contentAlignment = Alignment.Center
+                ) { W95Icon(0, 40.dp) }
+                Column {
+                    Text(time, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                    Text(date, color = Color.White, fontSize = 12.sp)
+                    Text("Ketuk untuk masuk", color = Color.White, fontSize = 13.sp)
+                }
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(2.dp).background(Color(0xFFF2A14B)))
+        Row(
+            Modifier.fillMaxWidth().background(Color(0xFF00309C)).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Geser ke atas atau ketuk untuk membuka kunci.", color = Color.White, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Box(
+                Modifier
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                    .background(Color(0xFFD6452E))
+                    .clickable(onClick = onCancel)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) { Text("Batal", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+        }
+    }
+}
+
+// ---------------------------------------------------------------- PDA
+
+@androidx.compose.runtime.Composable
+private fun PdaLock(time: String, date: String, onUnlock: () -> Unit, onCancel: () -> Unit) {
+    Column(Modifier.fillMaxSize().background(Pal.bg).unlockSwipe(onUnlock)) {
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().height(30.dp).background(Pal.accent).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            PdaFlag(16.dp)
+            Text("Terkunci", color = Pal.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(time, color = Pal.onAccent, fontSize = 13.sp)
+        }
+        Box(Modifier.weight(1f).padding(10.dp), contentAlignment = Alignment.Center) {
+            Column(Modifier.fillMaxWidth().border(1.dp, Pal.text).background(Pal.card)) {
+                Text(
+                    "PERANGKAT TERKUNCI", color = Pal.bg, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth().background(Pal.text).padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(time, color = Pal.text, fontSize = 48.sp, fontWeight = FontWeight.Bold)
+                    Text(date, color = Pal.soft, fontSize = 13.sp)
+                    Text("Ketuk Buka atau geser ke atas untuk membuka kunci.", color = Pal.text, fontSize = 12.sp)
+                }
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().background(Pal.card).navigationBarsPadding().padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            PdaKey("Buka", Modifier.weight(1f), onUnlock)
+            PdaKey("Batal", Modifier.weight(1f), onCancel)
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun PdaKey(text: String, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.height(44.dp).border(2.dp, Pal.text).background(Pal.bg).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) { Text(text, color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+}
+
+// ---------------------------------------------------------------- Mac OS klasik
+
+@androidx.compose.runtime.Composable
+private fun MacLock(time: String, date: String, onUnlock: () -> Unit, onCancel: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .drawBehind {
+                drawRect(Color(0xFFA6A6A6))
+                val step = 4.dp.toPx()
+                var y = 0f
+                while (y < size.height) {
+                    drawRect(Color(0xFF8E8E8E), androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(size.width, 1.dp.toPx()))
+                    y += step
+                }
+            }
+            .unlockSwipe(onUnlock)
+    ) {
+        Column(Modifier.fillMaxWidth().background(Color.White).statusBarsPadding()) {
+            Row(Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Tweak", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(time, color = Color.Black, fontSize = 14.sp)
+            }
+            Box(Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
+        }
+        Box(Modifier.weight(1f).padding(24.dp), contentAlignment = Alignment.Center) {
+            Column(
+                Modifier
+                    .widthIn(max = 340.dp)
+                    .fillMaxWidth()
+                    .macShadow()
+                    .background(Color.White)
+                    .border(2.dp, Color.Black)
+            ) {
+                Box(Modifier.fillMaxWidth().height(24.dp).background(Color.White).stripes(), contentAlignment = Alignment.Center) {
+                    Text("Terkunci", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color.White).padding(horizontal = 8.dp))
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        MacIcon(0, 44.dp)
+                        Column {
+                            Text(time, color = Color.Black, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+                            Text(date, color = Color.Black, fontSize = 12.sp)
+                        }
+                    }
+                    Text("Ketuk Buka atau geser ke atas untuk membuka kunci.", color = Color.Black, fontSize = 13.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        Box(
+                            Modifier.width(80.dp).height(30.dp)
+                                .border(1.dp, Color.Black, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                .clickable(onClick = onCancel),
+                            contentAlignment = Alignment.Center
+                        ) { Text("Batal", color = Color.Black, fontSize = 13.sp) }
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            Modifier.width(80.dp).height(30.dp)
+                                .border(3.dp, Color.Black, androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                                .clickable(onClick = onUnlock),
+                            contentAlignment = Alignment.Center
+                        ) { Text("Buka", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Layanan latar: memantau layar mati lalu menampilkan layar kunci buatan launcher. */
 class LockService : Service() {
 
@@ -203,7 +398,7 @@ class LockService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val n = Notification.Builder(this, CHANNEL)
-            .setContentTitle("Layar kunci Windows 95 aktif")
+            .setContentTitle("Layar kunci aktif")
             .setSmallIcon(R.drawable.ic_stat)
             .setOngoing(true)
             .build()
