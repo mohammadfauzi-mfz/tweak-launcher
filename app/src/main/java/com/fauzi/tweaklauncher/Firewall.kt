@@ -324,10 +324,7 @@ fun FirewallCard(vm: MainVm) {
         if (cfg.fwOn) "Aktif · $count aplikasi" else "Mati",
         defaultOpen = false
     ) {
-        Text(
-            "Pilih aplikasi yang tidak boleh memakai internet, semuanya, hanya Wi-Fi, atau hanya data seluler. Memakai VPN lokal di HP, datamu tidak dikirim ke mana pun.",
-            color = Pal.soft, fontSize = 13.sp
-        )
+        Hint("Pilih aplikasi yang tidak boleh memakai internet, semuanya, hanya Wi-Fi, atau hanya data seluler. Memakai VPN lokal di HP, datamu tidak dikirim ke mana pun.")
         ChoiceRow(
             "Cara kerja",
             listOf("vpn" to "VPN lokal", "shizuku" to "Shizuku (tanpa VPN)"),
@@ -372,20 +369,14 @@ fun FirewallCard(vm: MainVm) {
         }
         ActionButton("Atur aplikasi...", Modifier.fillMaxWidth(), primary = true) { vm.fwOpen = true }
         if (cfg.fwEngine == "shizuku") {
-            Text(
-                "Mode Shizuku tidak memakai VPN, tapi butuh Shizuku aktif dan hanya bisa blokir total (bukan per Wi-Fi atau data). Aturan perlu diterapkan ulang setelah HP restart.",
-                color = Pal.sub, fontSize = 12.sp
-            )
+            Hint("Mode Shizuku tidak memakai VPN, tapi butuh Shizuku aktif dan hanya bisa blokir total (bukan per Wi-Fi atau data). Aturan perlu diterapkan ulang setelah HP restart.")
             ActionButton("Diagnosa", Modifier.fillMaxWidth()) {
                 vm.fwMsg = "Memeriksa..."
                 vm.viewModelScope.launch { vm.fwMsg = withContext(Dispatchers.IO) { Firewall.diagnose(cfg) } }
             }
             if (vm.fwMsg.isNotEmpty()) Text(vm.fwMsg, color = Pal.soft, fontSize = 12.sp)
         } else {
-            Text(
-                "Android hanya mengizinkan satu VPN aktif. Jika kamu memakai VPN lain (mis. 1.1.1.1), salah satunya akan mati.",
-                color = Pal.sub, fontSize = 12.sp
-            )
+            Hint("Android hanya mengizinkan satu VPN aktif. Jika kamu memakai VPN lain (mis. 1.1.1.1), salah satunya akan mati.")
         }
     }
 }

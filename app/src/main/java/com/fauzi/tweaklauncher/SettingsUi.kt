@@ -152,7 +152,7 @@ private fun AppearancePage(vm: MainVm) {
             ChoiceRow("Warna layar DOS", listOf("green" to "Hijau", "gray" to "Abu-abu", "amber" to "Amber"), cfg.dosColor) { cfg.dosColor = it }
         }
         if (cfg.uiMode != "modern") {
-            Text("Di mode ini, tema warna, aksen, font, dan latar diabaikan. Kembali ke Modern untuk memakainya lagi.", color = Pal.sub, fontSize = 12.sp)
+            Hint("Di mode ini, tema warna, aksen, font, dan latar diabaikan. Kembali ke Modern untuk memakainya lagi.")
         }
     }
     WallpaperCard(vm)
@@ -397,10 +397,7 @@ private fun AutomationPage(vm: MainVm) {
             "Memantau aplikasi di layar lewat layanan latar. Butuh izin Akses penggunaan dan Shizuku.",
             cfg.autoApp
         ) { vm.setAutoApp(it) }
-        Text(
-            "Atur profil tiap aplikasi lewat tahan lama aplikasi, lalu Profil khusus. Aplikasi Boost aktif otomatis memakai profil Boost.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Atur profil tiap aplikasi lewat tahan lama aplikasi, lalu Profil khusus. Aplikasi Boost aktif otomatis memakai profil Boost.")
     }
     FoldCard("set_sched", "Jadwal profil", if (cfg.autoSched) "Aktif" else "Mati", defaultOpen = false) {
         SwitchRow("Jadwal profil", "Contoh: mode Hemat tiap malam. Jadwal menimpa profil manual.", cfg.autoSched) { vm.setAutoSched(it) }
@@ -461,10 +458,7 @@ private fun DisplayPage(vm: MainVm) {
             "Saat ini: ${d.curSize.ifEmpty { "-" }}  •  ${d.curDpi} dpi",
             color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Medium
         )
-        Text(
-            "Setelah diubah, akan muncul konfirmasi 15 detik. Jika tidak dikonfirmasi, pengaturan kembali otomatis, jadi aman jika layar jadi sulit dipakai.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Setelah diubah, akan muncul konfirmasi 15 detik. Jika tidak dikonfirmasi, pengaturan kembali otomatis, jadi aman jika layar jadi sulit dipakai.")
     }
     FoldCard("set_dpi", "DPI", "${d.curDpi}", defaultOpen = false) {
         StepRow(
@@ -499,10 +493,7 @@ private fun ToolsPage(vm: MainVm) {
         }
     }
     FoldCard("set_sleep", "Tidurkan aplikasi jarang dipakai", "${sleeping.size} tertidur", defaultOpen = false) {
-        Text(
-            "Aplikasi yang ditidurkan dihentikan dan dilarang jalan di latar. Dibangunkan otomatis saat dibuka dari launcher. Aplikasi sistem tidak ikut.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Aplikasi yang ditidurkan dihentikan dan dilarang jalan di latar. Dibangunkan otomatis saat dibuka dari launcher. Aplikasi sistem tidak ikut.")
         ActionButton("Cari yang tidak dipakai 14 hari", Modifier.fillMaxWidth()) { vm.loadUnused(14) }
         if (vm.unused.isNotEmpty()) {
             Text(
@@ -529,10 +520,7 @@ private fun BackupPage(vm: MainVm) {
         if (uri != null) vm.importFrom(uri)
     }
     SCard {
-        Text(
-            "Cadangan berisi semua tampilan, profil, folder, game, dan aturan. Widget tidak ikut karena terikat pada HP ini.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Cadangan berisi semua tampilan, profil, folder, game, dan aturan. Widget tidak ikut karena terikat pada HP ini.")
         ActionButton("Ekspor pengaturan", Modifier.fillMaxWidth(), primary = true) {
             exportL.launch("tweak-launcher-backup.json")
         }
@@ -567,10 +555,7 @@ private fun UpdatePage(vm: MainVm) {
         }
     }
     SCard {
-        Text(
-            "Pembaruan diambil dari GitHub Releases repo ${Updater.REPO}. Repo harus publik, dan APK baru dibuat otomatis setiap ada perubahan kode.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Pembaruan diambil dari GitHub Releases repo ${Updater.REPO}. Repo harus publik, dan APK baru dibuat otomatis setiap ada perubahan kode.")
     }
 }
 

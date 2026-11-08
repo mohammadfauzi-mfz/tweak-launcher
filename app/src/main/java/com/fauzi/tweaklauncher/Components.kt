@@ -33,6 +33,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -147,6 +151,20 @@ fun FoldCard(
     SCard(Modifier.animateContentSize()) {
         FoldHeader(title, summary, open, toggle)
         if (open) content()
+    }
+}
+
+/** Teks bantuan panjang yang disembunyikan di balik tombol Info. */
+@Composable
+fun Hint(text: String) {
+    var open by remember { mutableStateOf(false) }
+    Column {
+        Text(
+            if (open) "Sembunyikan info" else "Info",
+            color = Pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable { open = !open }.padding(vertical = 2.dp)
+        )
+        if (open) Text(text, color = Pal.sub, fontSize = 12.sp)
     }
 }
 

@@ -97,10 +97,7 @@ fun AdsBlockCard(vm: MainVm) {
         if (cfg.adsDnsOn) "Aktif · ${AdsBlock.host(cfg)}" else "Mati",
         defaultOpen = false
     ) {
-        Text(
-            "Memakai DNS pemfilter iklan dan pelacak untuk seluruh HP, lewat Shizuku, tanpa VPN. Tidak bisa dipilih per aplikasi. Iklan yang menyatu dengan konten (mis. video YouTube) tidak terblokir.",
-            color = Pal.soft, fontSize = 13.sp
-        )
+        Hint("Memakai DNS pemfilter iklan dan pelacak untuk seluruh HP, lewat Shizuku, tanpa VPN. Tidak bisa dipilih per aplikasi. Iklan yang menyatu dengan konten (mis. video YouTube) tidak terblokir.")
         ChoiceRow("Penyedia DNS", AdsBlock.PROVIDERS, cfg.adsProvider) { p ->
             cfg.adsProvider = p
             if (cfg.adsDnsOn && (p != "custom" || AdsBlock.validHost(cfg.adsCustom.trim()))) vm.adsApply(true)
@@ -118,9 +115,6 @@ fun AdsBlockCard(vm: MainVm) {
         if (vm.adsMsg.isNotEmpty()) Text(vm.adsMsg, color = Pal.soft, fontSize = 12.sp)
         if (cur.isNotBlank()) Text("Status sistem: $cur", color = Pal.sub, fontSize = 11.sp)
         DnsTestBlock(vm)
-        Text(
-            "Jika kamu memakai VPN lain (mis. 1.1.1.1), DNS dari VPN itu yang dipakai dan blok iklan ini tidak berlaku selama VPN menyala.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Jika kamu memakai VPN lain (mis. 1.1.1.1), DNS dari VPN itu yang dipakai dan blok iklan ini tidak berlaku selama VPN menyala.")
     }
 }

@@ -388,10 +388,7 @@ fun IconPackCard(vm: MainVm) {
     val packs = remember(vm.packRev) { IconPack.packs(ctx) }
     var guessPack by remember { mutableStateOf("") }
     FoldCard("set_pack", "Paket ikon Windows 98", defaultOpen = false) {
-        Text(
-            "Ganti ikon aplikasi dengan menahan lama aplikasinya lalu pilih Ikon. Atau tebak otomatis di bawah.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Ganti ikon aplikasi dengan menahan lama aplikasinya lalu pilih Ikon. Atau tebak otomatis di bawah.")
         SwitchRow("Ikon paket hitam putih", "Cocok untuk mode Mac OS klasik", cfg.packGray) { cfg.packGray = it }
         if (packs.isNotEmpty()) {
             Text("Paket untuk tebak otomatis", color = Pal.sub, fontSize = 12.sp)
@@ -449,10 +446,7 @@ fun ImportPackCard(vm: MainVm) {
         if (uri != null) vm.importIconPack(ctx, uri)
     }
     FoldCard("set_import", "Impor paket ikon (.zip)", "${packs.size} paket diimpor", defaultOpen = false) {
-        Text(
-            "Pilih berkas .zip berisi gambar PNG, WebP, atau JPG. Berkas .ico tidak bisa dibaca Android, ubah dulu ke PNG. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.",
-            color = Pal.sub, fontSize = 12.sp
-        )
+        Hint("Pilih berkas .zip berisi gambar PNG, WebP, atau JPG. Berkas .ico tidak bisa dibaca Android, ubah dulu ke PNG. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.")
         ActionButton("Impor paket ikon (.zip)", Modifier.fillMaxWidth(), primary = true) {
             zip.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream", "*/*"))
         }
