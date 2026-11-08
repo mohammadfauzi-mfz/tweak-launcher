@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -407,11 +410,15 @@ private fun W95Taskbar(vm: MainVm) {
 // ---------------------------------------------------------------- Menu Start
 
 @Composable
-private fun W95MenuRow(label: String, kind: Int, arrow: Boolean = false, active: Boolean = false, onClick: () -> Unit) {
+private fun W95MenuRow(
+    label: String, kind: Int, arrow: Boolean = false, active: Boolean = false,
+    onPos: ((Float) -> Unit)? = null, onClick: () -> Unit
+) {
     val fg = if (active) Color.White else Color.Black
     Row(
         Modifier
             .fillMaxWidth()
+            .onGloballyPositioned { onPos?.invoke(it.positionInRoot().y) }
             .background(if (active) Color(0xFF000080) else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 7.dp),
@@ -467,12 +474,12 @@ private fun W95GameRow(label: String, mines: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun W95SubApp(a: AppItem, onClick: () -> Unit) {
+private fun W95SubApp(a: AppItem, indent: androidx.compose.ui.unit.Dp = 0.dp, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(start = 8.dp + indent, end = 8.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -483,10 +490,21 @@ private fun W95SubApp(a: AppItem, onClick: () -> Unit) {
 
 @Composable
 private fun BoxScopeStart(vm: MainVm) {
-    // 0 = tertutup, 1 = submenu Program, 2 = submenu Setelan
+    // 0 = tertutup, 1 = submenu Program, 2 = submenu Setelan, 3 = submenu Game
     var sub by remember { mutableStateOf(0) }
+    var openTab by remember { mutableStateOf("") }
+    val rowY = remember { mutableStateMapOf<Int, Float>() }
+    var menuTop by remember { mutableStateOf(0f) }
+    var subH by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
     LaunchedEffect(Unit) { vm.loadUsage() }
     val apps = remember(vm.apps) { vm.apps.sortedBy { it.label.lowercase() } }
+    // submenu sejajar dengan baris yang diketuk; jika terlalu tinggi, menempel ke bawah menu
+    val menuH = remember { mutableStateOf(0f) }
+    val padBottom = with(density) {
+        val ry = (rowYs(rowY, sub) - menuTop)
+        (menuH.value - ry - subH).coerceAtLeast(0f).toDp()
+    }
     Box {
         Row(
             Modifier
@@ -496,13 +514,17 @@ private fun BoxScopeStart(vm: MainVm) {
                 .background(W95_GRAY)
                 .bevel(true)
                 .padding(3.dp)
+                .onGloballyPositioned {
+                    menuTop = it.positionInRoot().y
+                    menuH.value = it.size.height.toFloat()
+                }
         ) {
             W95Banner(Modifier.width(28.dp).fillMaxHeight())
             Column(Modifier.weight(1f)) {
-                W95MenuRow("Program", 1, arrow = true, active = sub == 1) { sub = if (sub == 1) 0 else 1 }
-                W95MenuRow("Game", 1, arrow = true, active = sub == 3) { sub = if (sub == 3) 0 else 3 }
+                W95MenuRow("Program", 1, arrow = true, active = sub == 1, onPos = { rowY[1] = it }) { sub = if (sub == 1) 0 else 1 }
+                W95MenuRow("Game", 1, arrow = true, active = sub == 3, onPos = { rowY[3] = it }) { sub = if (sub == 3) 0 else 3 }
                 W95MenuRow("Komputer Saya", 0) { vm.w95Open(Screen.Care) }
-                W95MenuRow("Setelan", 2, arrow = true, active = sub == 2) { sub = if (sub == 2) 0 else 2 }
+                W95MenuRow("Setelan", 2, arrow = true, active = sub == 2, onPos = { rowY[2] = it }) { sub = if (sub == 2) 0 else 2 }
                 W95MenuRow("Cari...", 1) { vm.w95Open(Screen.Drawer) }
                 W95MenuLine()
                 W95MenuRow("Kunci layar...", 3) {
@@ -515,20 +537,38 @@ private fun BoxScopeStart(vm: MainVm) {
             Column(
                 Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 172.dp)
+                    .padding(start = 172.dp, bottom = padBottom)
                     .width(184.dp)
                     .heightIn(max = 420.dp)
+                    .onGloballyPositioned { subH = it.size.height.toFloat() }
                     .background(W95_GRAY)
                     .bevel(true)
                     .padding(3.dp)
                     .verticalScroll(rememberScrollState())
             ) {
                 if (sub == 1) {
-                    if (apps.isEmpty()) Text("Belum ada aplikasi", color = Color.Black, fontSize = 13.sp, modifier = Modifier.padding(8.dp))
-                    apps.forEach { a ->
-                        W95SubApp(a) {
-                            vm.w95Start = false
-                            vm.launchApp(a.pkg)
+                    val tabs = vm.allTabs().filter { it.id != "all" }
+                    tabs.forEach { t ->
+                        val list = vm.appsForTab(t.id)
+                        if (list.isNotEmpty()) {
+                            W95FolderRow(t.label, openTab == t.id) { openTab = if (openTab == t.id) "" else t.id }
+                            if (openTab == t.id) list.forEach { a ->
+                                W95SubApp(a, indent = 14.dp) {
+                                    vm.w95Start = false
+                                    vm.launchApp(a.pkg)
+                                }
+                            }
+                        }
+                    }
+                    if (tabs.isNotEmpty()) W95MenuLine()
+                    W95FolderRow("Semua (${apps.size})", openTab == "all") { openTab = if (openTab == "all") "" else "all" }
+                    if (openTab == "all") {
+                        if (apps.isEmpty()) Text("Belum ada aplikasi", color = Color.Black, fontSize = 13.sp, modifier = Modifier.padding(8.dp))
+                        apps.forEach { a ->
+                            W95SubApp(a, indent = 14.dp) {
+                                vm.w95Start = false
+                                vm.launchApp(a.pkg)
+                            }
                         }
                     }
                 } else if (sub == 3) {
@@ -557,6 +597,24 @@ private fun BoxScopeStart(vm: MainVm) {
                 }
             }
         }
+    }
+}
+
+private fun rowYs(m: Map<Int, Float>, sub: Int): Float = m[sub] ?: 0f
+
+@Composable
+private fun W95FolderRow(label: String, open: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        W95Icon(1, 24.dp)
+        Text(label, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(if (open) "\u25BC" else "\u25B6", color = Color.Black, fontSize = 10.sp)
     }
 }
 

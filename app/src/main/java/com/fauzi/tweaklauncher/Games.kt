@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -146,6 +148,7 @@ private fun GameWindow(vm: MainVm, w: GameWin, xp: Boolean, maxW: Float, maxH: F
         Modifier
             .offset { IntOffset(w.x.roundToInt(), w.y.roundToInt()) }
             .zIndex(w.z.toFloat())
+            .width(IntrinsicSize.Min)
             .then(frame)
             .padding(3.dp)
             .pointerInput(Unit) {
@@ -317,7 +320,9 @@ private fun MinesBody() {
             }
         }
     }
-    val cell = 26.dp
+    var cellDp by remember { mutableFloatStateOf(26f) }
+    val cell = cellDp.dp
+    val density = LocalDensity.current.density
     Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             MINE_LEVELS.forEachIndexed { i, l -> GBtn(l.first, i == level) { level = i; gen++ } }
@@ -349,12 +354,33 @@ private fun MinesBody() {
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             GBtn(if (flagMode) "Mode: Bendera" else "Mode: Buka", flagMode) { flagMode = !flagMode }
             Text(
                 when (g.status) { 2 -> "Menang!"; 3 -> "Kena ranjau"; else -> "Tahan = bendera" },
                 color = Color.Black, fontSize = 12.sp
             )
+            Spacer(Modifier.weight(1f))
+            // pegangan di pojok kanan bawah: seret untuk mengubah ukuran kotak
+            Box(
+                Modifier
+                    .size(24.dp)
+                    .pointerInput(g) {
+                        detectDragGestures { change, drag ->
+                            change.consume()
+                            cellDp = (cellDp + drag.x / density / g.cols).coerceIn(18f, 46f)
+                        }
+                    },
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                Canvas(Modifier.size(16.dp)) {
+                    val w = this.size.width
+                    for (k in 1..3) {
+                        val o = w * k / 4f
+                        drawLine(Color(0xFF404040), Offset(w, o), Offset(o, w), 2f)
+                    }
+                }
+            }
         }
     }
 }
@@ -400,7 +426,7 @@ private fun MineCell(g: MinesGame, i: Int, size: Dp, flagMode: Boolean) {
                 }
             } else {
                 val n = g.adj(i)
-                if (n > 0) Text("$n", color = NUM_COLORS[n], fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                if (n > 0) Text("$n", color = NUM_COLORS[n], fontSize = (size.value * 0.58f).sp, fontWeight = FontWeight.Bold)
             }
         } else if (st == 2) {
             Canvas(Modifier.size(size * 0.6f)) {
