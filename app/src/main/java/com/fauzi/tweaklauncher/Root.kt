@@ -42,6 +42,14 @@ fun Root(vm: MainVm) {
     val cfg = vm.cfg
     val addWidget = rememberWidgetAdder(vm)
 
+    // Statistik (baterai di bilah tugas, dll.) diperbarui di semua mode dan layar.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            vm.refreshStats()
+            kotlinx.coroutines.delay(5000)
+        }
+    }
+
     BackHandler(enabled = vm.screen != Screen.Home) {
         if (vm.screen == Screen.Settings && vm.settingsPage.isNotEmpty()) {
             vm.settingsPage = ""
