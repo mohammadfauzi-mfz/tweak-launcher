@@ -169,6 +169,8 @@ private fun AppearancePage(vm: MainVm) {
             SwitchRow("Perintah suara", "Ketuk cincin HUD lalu bicara: buka aplikasi, ganti mode, tanya status", cfg.jvOn) { cfg.jvOn = it }
             SwitchRow("Jawab dengan suara", "Jarvis membacakan jawabannya", cfg.jvSpeak) { cfg.jvSpeak = it }
             SwitchRow("Utamakan offline", "Pakai pengenal suara di HP. Perlu paket bahasa Indonesia offline", cfg.jvOffline) { cfg.jvOffline = it }
+            SwitchRow("Peringatan proaktif", "Jarvis memberi tahu saat baterai rendah, suhu tinggi, atau memori penuh (saat launcher terbuka)", cfg.jvAlert) { cfg.jvAlert = it }
+            SwitchRow("Ringkasan pagi", "Sapaan dan ringkasan kondisi HP sekali sehari, pukul 05.00 sampai 11.00", cfg.jvBrief) { cfg.jvBrief = it }
             Hint("Unduh paket offline: Setelan HP > Aplikasi > Layanan Suara Google > Pengenalan ucapan offline > Bahasa Indonesia. Contoh perintah: \"buka WhatsApp\", \"status baterai\", \"mode hemat\", \"bersihkan cache\", \"kunci layar\".")
         }
     }

@@ -68,3 +68,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Winamp mengambang (Start Win95/XP): remote untuk YouTube Music lewat sesi media Android (judul, progres, play/jeda/next/prev, seek, volume), butuh akses notifikasi.
 - Tampilan HUD Jarvis di mode Modern (Setelan > Tampilan > Jarvis): cincin jam animasi, indikator melingkar, sapaan dan status.
 - Jarvis tahap 2 (mode Modern + HUD): ketuk cincin HUD lalu bicara (id-ID, utamakan offline) untuk buka aplikasi, ganti mode, tanya status; jawaban lewat suara. Opsi di Setelan > Tampilan > Jarvis.
+- Jarvis tahap 3: peringatan proaktif (baterai, suhu, RAM, penyimpanan) dan ringkasan pagi di HUD; opsi di Setelan > Tampilan > Jarvis.

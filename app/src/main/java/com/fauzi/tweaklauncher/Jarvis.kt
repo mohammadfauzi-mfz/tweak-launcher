@@ -27,6 +27,7 @@ object Jarvis {
     var state by mutableStateOf("idle")
     var heard by mutableStateOf("")
     var reply by mutableStateOf("")
+    var alert by mutableStateOf("")
 
     private val id = Locale("id", "ID")
     private val scope = CoroutineScope(Dispatchers.Main)
@@ -76,6 +77,7 @@ object Jarvis {
         stop()
         heard = ""
         reply = ""
+        alert = ""
         val rec = try {
             if (Build.VERSION.SDK_INT >= 33 && vm.cfg.jvOffline && SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx))
                 SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx)
@@ -248,5 +250,52 @@ object JarvisBrain {
         }
     } catch (e: Exception) {
         "Status jaringan tidak diketahui."
+    }
+}
+
+/** Peringatan proaktif dan ringkasan pagi. Berjalan saat HUD tampil di layar. */
+object JarvisWatch {
+    private val last = HashMap<String, Long>()
+
+    private fun due(key: String, gapMin: Int): Boolean {
+        val n = System.currentTimeMillis()
+        if (n - (last[key] ?: 0L) < gapMin * 60_000L) return false
+        last[key] = n
+        return true
+    }
+
+    fun check(ctx: Context, vm: MainVm) {
+        val cfg = vm.cfg
+        if (!vm.hudOn) return
+        val st = vm.stats
+        val name = cfg.hudName.trim()
+        val who = if (name.isBlank()) "" else ", $name"
+
+        // Ringkasan pagi: sekali per hari, antara 05.00 dan 11.00.
+        if (cfg.jvBrief && st.battery > 0) {
+            val cal = java.util.Calendar.getInstance()
+            val h = cal.get(java.util.Calendar.HOUR_OF_DAY)
+            val day = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+            if (h in 5..10 && cfg.jvBriefDay != day) {
+                cfg.jvBriefDay = day
+                val d = SimpleDateFormat("EEEE, d MMMM", Locale("id", "ID")).format(Date())
+                val txt = "Selamat pagi$who. Hari ini $d. Baterai ${st.battery} persen, RAM ${(st.ramPct * 100).toInt()} persen. " + hudStatus(st)
+                Jarvis.say(ctx, vm, txt)
+                return
+            }
+        }
+
+        if (!cfg.jvAlert || st.battery <= 0) return
+        val msg = when {
+            st.battery in 1..15 && due("bat", 30) -> "Baterai tinggal ${st.battery} persen$who. Sebaiknya colokkan charger."
+            st.tempPct > 0.85f && due("temp", 20) -> "Suhu perangkat tinggi, ${st.tempText}$who. Hentikan aplikasi berat."
+            st.ramPct > 0.9f && due("ram", 30) -> "Memori hampir penuh$who. Mau saya bersihkan? Katakan: bersihkan cache."
+            st.storagePct > 0.93f && due("sto", 360) -> "Penyimpanan hampir penuh$who."
+            else -> null
+        }
+        if (msg != null) {
+            Jarvis.alert = msg
+            Jarvis.say(ctx, vm, msg)
+        }
     }
 }

@@ -21,9 +21,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,6 +103,7 @@ fun HudHeader(vm: MainVm, now: Long) {
         else perm.launch(Manifest.permission.RECORD_AUDIO)
     }
     val listening = Jarvis.state != "idle"
+    LaunchedEffect(now) { JarvisWatch.check(ctx, vm) }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
@@ -149,6 +152,14 @@ fun HudHeader(vm: MainVm, now: Long) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Canvas(Modifier.size(8.dp)) { drawCircle(acc.copy(alpha = pulse)) }
             Text("STATUS  " + hudStatus(st), color = Pal.soft, fontSize = 12.sp, letterSpacing = 0.5.sp)
+        }
+        if (Jarvis.alert.isNotBlank()) {
+            Text(
+                "PERINGATAN  " + Jarvis.alert,
+                color = Color(0xFFFFB74D),
+                fontSize = 12.sp,
+                modifier = Modifier.clip(CircleShape).clickable { Jarvis.alert = "" }.padding(horizontal = 10.dp, vertical = 4.dp)
+            )
         }
         if (cfg.jvOn) {
             val line2 = when {
