@@ -101,6 +101,8 @@ class Cfg(ctx: Context) {
     var careFold by s("careFold", "")
     var lockOn by s("lockOn", false)
     var gameApps by s("gameApps", "")
+    var hud by s("hud", false)
+    var hudName by s("hudName", "")
     var adsPrevMode by s("adsPrevMode", "")
     var adsPrevHost by s("adsPrevHost", "")
     var fwOn by s("fwOn", false)

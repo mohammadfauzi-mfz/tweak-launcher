@@ -66,3 +66,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Tambah gambar PNG satuan ke paket ikon impor (atau paket baru "Ikon_saya") di Setelan > Ikon > Impor paket ikon.
 - Folder Game di menu Start Win95 dan XP: Minesweeper dan Solitaire dalam jendela mengambang yang bisa digeser, plus game dari HP yang dipilih di Setelan > Folder Game.
 - Winamp mengambang (Start Win95/XP): remote untuk YouTube Music lewat sesi media Android (judul, progres, play/jeda/next/prev, seek, volume), butuh akses notifikasi.
+- Tampilan HUD Jarvis di mode Modern (Setelan > Tampilan > Jarvis): cincin jam animasi, indikator melingkar, sapaan dan status.

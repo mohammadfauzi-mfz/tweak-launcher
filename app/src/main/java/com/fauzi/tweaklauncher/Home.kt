@@ -82,9 +82,9 @@ fun HomeScreen(vm: MainVm) {
         ) {
             sections.forEach { s ->
                 when (s) {
-                    "clock" -> ClockBlock(vm, now)
+                    "clock" -> if (vm.hudOn) HudHeader(vm, now) else ClockBlock(vm, now)
                     "profile" -> ProfileCard(vm)
-                    "stats" -> StatsCard(vm)
+                    "stats" -> if (vm.hudOn) HudStats(vm) else StatsCard(vm)
                     "apps" -> AppsGrid(vm)
                     "widgets" -> WidgetsBlock(vm)
                 }

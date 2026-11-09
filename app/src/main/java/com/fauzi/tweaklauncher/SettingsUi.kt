@@ -161,6 +161,13 @@ private fun AppearancePage(vm: MainVm) {
     }
     WallpaperCard(vm)
     WpAccentCard(vm)
+    if (cfg.uiMode == "modern") {
+        FoldCard("set_hud", "Jarvis (tampilan HUD)", if (cfg.hud) "Aktif" else "Mati", defaultOpen = false) {
+            SwitchRow("Tampilan HUD Jarvis", "Beranda bergaya HUD: cincin jam, indikator, dan status", cfg.hud) { cfg.hud = it }
+            Text("Nama panggilan di sapaan (boleh kosong)", color = Pal.sub, fontSize = 12.sp)
+            InputBox(cfg.hudName, { cfg.hudName = it }, "mis. Pak Fauzi", Modifier.fillMaxWidth())
+        }
+    }
     FoldCard("set_preset", "Tema siap pakai", defaultOpen = false) {
         ChoiceRow(
             "Tema siap pakai",
