@@ -67,3 +67,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Folder Game di menu Start Win95 dan XP: Minesweeper dan Solitaire dalam jendela mengambang yang bisa digeser, plus game dari HP yang dipilih di Setelan > Folder Game.
 - Winamp mengambang (Start Win95/XP): remote untuk YouTube Music lewat sesi media Android (judul, progres, play/jeda/next/prev, seek, volume), butuh akses notifikasi.
 - Tampilan HUD Jarvis di mode Modern (Setelan > Tampilan > Jarvis): cincin jam animasi, indikator melingkar, sapaan dan status.
+- Jarvis tahap 2 (mode Modern + HUD): ketuk cincin HUD lalu bicara (id-ID, utamakan offline) untuk buka aplikasi, ganti mode, tanya status; jawaban lewat suara. Opsi di Setelan > Tampilan > Jarvis.

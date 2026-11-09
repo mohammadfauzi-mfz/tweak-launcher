@@ -166,6 +166,10 @@ private fun AppearancePage(vm: MainVm) {
             SwitchRow("Tampilan HUD Jarvis", "Beranda bergaya HUD: cincin jam, indikator, dan status", cfg.hud) { cfg.hud = it }
             Text("Nama panggilan di sapaan (boleh kosong)", color = Pal.sub, fontSize = 12.sp)
             InputBox(cfg.hudName, { cfg.hudName = it }, "mis. Pak Fauzi", Modifier.fillMaxWidth())
+            SwitchRow("Perintah suara", "Ketuk cincin HUD lalu bicara: buka aplikasi, ganti mode, tanya status", cfg.jvOn) { cfg.jvOn = it }
+            SwitchRow("Jawab dengan suara", "Jarvis membacakan jawabannya", cfg.jvSpeak) { cfg.jvSpeak = it }
+            SwitchRow("Utamakan offline", "Pakai pengenal suara di HP. Perlu paket bahasa Indonesia offline", cfg.jvOffline) { cfg.jvOffline = it }
+            Hint("Unduh paket offline: Setelan HP > Aplikasi > Layanan Suara Google > Pengenalan ucapan offline > Bahasa Indonesia. Contoh perintah: \"buka WhatsApp\", \"status baterai\", \"mode hemat\", \"bersihkan cache\", \"kunci layar\".")
         }
     }
     FoldCard("set_preset", "Tema siap pakai", defaultOpen = false) {

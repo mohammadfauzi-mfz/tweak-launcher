@@ -6,7 +6,15 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,9 +92,21 @@ fun HudHeader(vm: MainVm, now: Long) {
     val pulse by tr.animateFloat(0.5f, 1f, infiniteRepeatable(tween(1600), RepeatMode.Reverse), label = "pulse")
     val acc = Pal.accent
     val line = Pal.line
+    val ctx = LocalContext.current
+    val perm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) Jarvis.listen(ctx, vm) else Jarvis.say(ctx, vm, "Izin mikrofon ditolak.")
+    }
+    val tap: () -> Unit = {
+        if (ctx.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) Jarvis.listen(ctx, vm)
+        else perm.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    val listening = Jarvis.state != "idle"
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.size(250.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(250.dp).clip(CircleShape).then(if (cfg.jvOn) Modifier.clickable { tap() } else Modifier),
+            contentAlignment = Alignment.Center
+        ) {
             Canvas(Modifier.fillMaxSize()) {
                 val c = center
                 val r = size.minDimension / 2f
@@ -117,7 +137,7 @@ fun HudHeader(vm: MainVm, now: Long) {
                         )
                     }
                 }
-                drawCircle(acc.copy(alpha = 0.5f), r * 0.64f, style = Stroke(2.dp.toPx()))
+                drawCircle(acc.copy(alpha = if (listening) pulse else 0.5f), r * 0.64f, style = Stroke(if (listening) 5.dp.toPx() else 2.dp.toPx()))
                 drawCircle(line, r * 0.58f, style = Stroke(1.dp.toPx()))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -129,6 +149,15 @@ fun HudHeader(vm: MainVm, now: Long) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Canvas(Modifier.size(8.dp)) { drawCircle(acc.copy(alpha = pulse)) }
             Text("STATUS  " + hudStatus(st), color = Pal.soft, fontSize = 12.sp, letterSpacing = 0.5.sp)
+        }
+        if (cfg.jvOn) {
+            val line2 = when {
+                Jarvis.state == "listen" -> if (Jarvis.heard.isBlank()) "Mendengarkan..." else "\"${Jarvis.heard}\""
+                Jarvis.state == "think" -> "Memproses..."
+                Jarvis.reply.isNotBlank() -> Jarvis.reply
+                else -> "Ketuk cincin lalu bicara"
+            }
+            Text(line2, color = if (Jarvis.reply.isNotBlank() && !listening) Pal.accent else Pal.sub, fontSize = 13.sp)
         }
     }
 }
