@@ -184,7 +184,11 @@ fun FolderDialog(vm: MainVm) {
         },
         confirmButton = {
             DlgButton(onClick = { vm.openFolder = null }) { Text("Tutup", color = Pal.accent) }
-        }
+        },
+        dismissButton = {
+            DlgButton(onClick = { vm.iconPick = IconTarget(true, "fld:$name", "Folder $name") }) { Text("Ganti ikon", color = Pal.accent) }
+        },
+        whiteBody = true
     )
 }
 

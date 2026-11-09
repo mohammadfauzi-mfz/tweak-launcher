@@ -42,7 +42,8 @@ fun TweakDialog(
     title: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
     confirmButton: @Composable () -> Unit,
-    dismissButton: (@Composable () -> Unit)? = null
+    dismissButton: (@Composable () -> Unit)? = null,
+    whiteBody: Boolean = false
 ) {
     val mode = LocalCfg.current.uiMode
     if (mode != "win95" && mode != "xp" && mode != "wp" && mode != "sym") {
@@ -128,7 +129,17 @@ fun TweakDialog(
                     ) { Text("✕", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                 }
                 Column(Modifier.fillMaxWidth().background(if (xp) XP_BEIGE else DLG_GRAY).padding(14.dp)) {
-                    if (text != null) text()
+                    if (text != null) {
+                        if (whiteBody) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.White)
+                                    .then(if (xp) Modifier.border(1.dp, Color(0xFF7F9DB9)) else Modifier.bevel(false))
+                                    .padding(8.dp)
+                            ) { text() }
+                        } else text()
+                    }
                     Row(
                         Modifier.fillMaxWidth().padding(top = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),

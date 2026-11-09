@@ -470,7 +470,17 @@ fun FolderTile(name: String, apps: List<AppItem>, modifier: Modifier, vm: MainVm
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val folderBmp = cfg.sysIcon("fld:$name")?.let { IconPack.get(ctx, it) }
+        if (folderBmp != null) {
+            Image(
+                bitmap = folderBmp,
+                contentDescription = name,
+                filterQuality = androidx.compose.ui.graphics.FilterQuality.None,
+                colorFilter = if (cfg.packGray) IconPack.GRAY else null,
+                modifier = Modifier.size(size).padding(size * 0.04f)
+            )
+        } else Column(
             Modifier
                 .size(size)
                 .clip(iconShape(cfg.iconShape))
