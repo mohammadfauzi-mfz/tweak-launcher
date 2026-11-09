@@ -70,3 +70,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Jarvis tahap 2 (mode Modern + HUD): ketuk cincin HUD lalu bicara (id-ID, utamakan offline) untuk buka aplikasi, ganti mode, tanya status; jawaban lewat suara. Opsi di Setelan > Tampilan > Jarvis.
 - Jarvis tahap 3: peringatan proaktif (baterai, suhu, RAM, penyimpanan) dan ringkasan pagi di HUD; opsi di Setelan > Tampilan > Jarvis.
 - Folder aplikasi: isi jendela putih di Win95/XP, dan ikon folder bisa diganti dari ikon paket (tombol Ganti ikon di jendela folder).
+- Jendela folder: tombol pensil (kiri bawah) untuk ubah nama, ganti ikon, tambah/keluarkan aplikasi, hapus folder.

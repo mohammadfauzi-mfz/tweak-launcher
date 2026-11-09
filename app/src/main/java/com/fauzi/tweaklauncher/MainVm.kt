@@ -122,6 +122,7 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     var folderPickApp by mutableStateOf<AppItem?>(null)
     var profilePickApp by mutableStateOf<AppItem?>(null)
     var openFolder by mutableStateOf<String?>(null)
+    var folderEdit by mutableStateOf(false)
     var showWidgetPicker by mutableStateOf(false)
     var showUpdate by mutableStateOf(false)
 
@@ -506,12 +507,33 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
         saveFolders(m)
     }
 
+    fun renameFolder(old: String, new: String): Boolean {
+        val n = new.trim()
+        if (n.isEmpty() || n.contains(":")) return false
+        if (n == old) return true
+        val m = LinkedHashMap(folders)
+        if (m.containsKey(n) || !m.containsKey(old)) return false
+        val out = LinkedHashMap<String, List<String>>()
+        m.forEach { (k, v) -> out[if (k == old) n else k] = v }
+        saveFolders(out)
+        cfg.pinnedCsv = Sys.join(Sys.list(cfg.pinnedCsv).map { if (it == "folder:$old") "folder:$n" else it })
+        val ic = Store.map(cfg.sysIconsJson)
+        ic.remove("fld:$old")?.let {
+            ic["fld:$n"] = it
+            cfg.sysIconsJson = Store.mapJson(ic)
+        }
+        if (openFolder == old) openFolder = n
+        return true
+    }
+
     fun deleteFolder(name: String) {
+        folderEdit = false
         val m = LinkedHashMap(folders)
         m.remove(name)
         saveFolders(m)
         cfg.pinnedCsv = Sys.join(Sys.list(cfg.pinnedCsv).filter { it != "folder:$name" })
         openFolder = null
+        folderEdit = false
     }
 
     // ---------------- Profil performa ----------------

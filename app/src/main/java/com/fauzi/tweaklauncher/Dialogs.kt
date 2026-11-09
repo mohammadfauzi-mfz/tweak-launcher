@@ -1,6 +1,9 @@
 package com.fauzi.tweaklauncher
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -185,8 +188,92 @@ fun FolderDialog(vm: MainVm) {
         confirmButton = {
             DlgButton(onClick = { vm.openFolder = null }) { Text("Tutup", color = Pal.accent) }
         },
-        dismissButton = {
-            DlgButton(onClick = { vm.iconPick = IconTarget(true, "fld:$name", "Folder $name") }) { Text("Ganti ikon", color = Pal.accent) }
+        startButton = {
+            DlgButton(onClick = { vm.folderEdit = true }) { PencilIcon(22.dp, Pal.accent) }
+        },
+        whiteBody = true
+    )
+    if (vm.folderEdit) FolderEditDialog(vm, name)
+}
+
+@Composable
+fun PencilIcon(size: androidx.compose.ui.unit.Dp, color: androidx.compose.ui.graphics.Color) {
+    androidx.compose.foundation.Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.30f, w * 0.70f), androidx.compose.ui.geometry.Offset(w * 0.74f, w * 0.26f), w * 0.2f)
+        drawLine(color.copy(alpha = 0.55f), androidx.compose.ui.geometry.Offset(w * 0.76f, w * 0.24f), androidx.compose.ui.geometry.Offset(w * 0.86f, w * 0.14f), w * 0.2f)
+        val tip = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.10f, w * 0.90f)
+            lineTo(w * 0.18f, w * 0.60f)
+            lineTo(w * 0.40f, w * 0.82f)
+            close()
+        }
+        drawPath(tip, color)
+    }
+}
+
+@Composable
+fun FolderEditDialog(vm: MainVm, name: String) {
+    var nm by remember(name) { mutableStateOf(name) }
+    var q by remember { mutableStateOf("") }
+    var adding by remember { mutableStateOf(false) }
+    var msg by remember { mutableStateOf("") }
+    val byPkg = vm.apps.associateBy { it.pkg }
+    val memberPkgs = vm.folders[name] ?: emptyList()
+    val members = memberPkgs.mapNotNull { byPkg[it] }
+    val key = q.trim().lowercase()
+    val candidates = vm.visibleApps
+        .filter { it.pkg !in memberPkgs && (key.isEmpty() || it.label.lowercase().contains(key)) }
+        .sortedBy { it.label.lowercase() }
+        .take(40)
+    TweakDialog(
+        onDismissRequest = { vm.folderEdit = false },
+        containerColor = Pal.card,
+        title = { Text("Edit folder", color = Pal.text) },
+        text = {
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Nama folder", color = Pal.sub, fontSize = 12.sp)
+                InputBox(nm, { nm = it; msg = "" }, "Nama folder", Modifier.fillMaxWidth())
+                ActionButton("Simpan nama", Modifier.fillMaxWidth()) {
+                    msg = if (vm.renameFolder(name, nm)) "Nama disimpan." else "Nama kosong, memuat titik dua, atau sudah dipakai."
+                }
+                if (msg.isNotEmpty()) Text(msg, color = Pal.sub, fontSize = 12.sp)
+                ActionButton("Ganti ikon folder", Modifier.fillMaxWidth()) {
+                    vm.iconPick = IconTarget(true, "fld:$name", "Folder $name")
+                }
+                Text("Isi folder (${members.size})", color = Pal.sub, fontSize = 12.sp)
+                members.forEach { a ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        AppIcon(a, 32.dp, badge = false)
+                        Text(a.label, color = Pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                        Text(
+                            "✕",
+                            color = Pal.accent,
+                            fontSize = 16.sp,
+                            modifier = Modifier.clickable { vm.removeFromFolder(name, a.pkg) }.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+                ActionButton(if (adding) "Sembunyikan daftar aplikasi" else "Tambah aplikasi", Modifier.fillMaxWidth()) { adding = !adding }
+                if (adding) {
+                    InputBox(q, { q = it }, "Cari aplikasi", Modifier.fillMaxWidth())
+                    candidates.forEach { a ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { vm.addToFolder(name, a.pkg) }.padding(vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            AppIcon(a, 32.dp, badge = false)
+                            Text(a.label, color = Pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                            Text("+", color = Pal.accent, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 10.dp))
+                        }
+                    }
+                }
+                ActionButton("Hapus folder", Modifier.fillMaxWidth()) { vm.deleteFolder(name) }
+            }
+        },
+        confirmButton = {
+            DlgButton(onClick = { vm.folderEdit = false }) { Text("Selesai", color = Pal.accent) }
         },
         whiteBody = true
     )

@@ -43,9 +43,11 @@ fun TweakDialog(
     text: (@Composable () -> Unit)? = null,
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null,
-    whiteBody: Boolean = false
+    whiteBody: Boolean = false,
+    startButton: (@Composable () -> Unit)? = null
 ) {
     val mode = LocalCfg.current.uiMode
+    val dBtn = dismissButton ?: startButton
     if (mode != "win95" && mode != "xp" && mode != "wp" && mode != "sym") {
         AlertDialog(
             onDismissRequest = onDismissRequest,
@@ -53,7 +55,7 @@ fun TweakDialog(
             title = title,
             text = text,
             confirmButton = confirmButton,
-            dismissButton = dismissButton
+            dBtn = dBtn
         )
         return
     }
@@ -73,7 +75,7 @@ fun TweakDialog(
                     Column(Modifier.fillMaxWidth().padding(14.dp)) { if (text != null) text() }
                     Row(Modifier.fillMaxWidth().background(symDarkBrush()), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.weight(1f)) { confirmButton() }
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { if (dismissButton != null) dismissButton() }
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { if (dBtn != null) dBtn() }
                     }
                 }
             }
@@ -89,7 +91,7 @@ fun TweakDialog(
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.weight(1f)) { confirmButton() }
-                    if (dismissButton != null) Box(Modifier.weight(1f)) { dismissButton() }
+                    if (dBtn != null) Box(Modifier.weight(1f)) { dBtn() }
                 }
             }
         }
@@ -145,6 +147,10 @@ fun TweakDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (startButton != null) {
+                            startButton()
+                            Spacer(Modifier.weight(1f))
+                        }
                         if (dismissButton != null) dismissButton()
                         confirmButton()
                     }
