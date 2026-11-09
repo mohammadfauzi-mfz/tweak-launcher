@@ -67,7 +67,8 @@ object IconPack {
         "mac1" to "Program (Mac)",
         "mac2" to "Panel Kontrol (Mac)",
         "sym1" to "Perawatan (Symbian)",
-        "sym2" to "Setelan (Symbian)"
+        "sym2" to "Setelan (Symbian)",
+        "winamp" to "Winamp"
     )
 
     /** Kata kunci nama berkas untuk menebak ikon sistem dari paket impor, per peran. */
@@ -75,13 +76,14 @@ object IconPack {
         "computer" to "computer", "mac0" to "computer",
         "folder" to "folder", "mac1" to "folder",
         "panel" to "panel", "mac2" to "panel",
-        "start" to "start", "sym1" to "care", "sym2" to "settings"
+        "start" to "start", "sym1" to "care", "sym2" to "settings", "winamp" to "winamp"
     )
     private val SYS_KEYS = mapOf(
         "computer" to listOf("mycomputer", "computer", "desktop", "monitor", "pc"),
         "folder" to listOf("folder", "directory", "programs", "program"),
         "panel" to listOf("controlpanel", "control", "panel", "tools", "tool"),
         "start" to listOf("start", "windows", "winlogo", "logo"),
+        "winamp" to listOf("winamp", "music", "musik", "player", "media", "audio", "cd"),
         "care" to listOf("perawatan", "maintenance", "care", "health", "battery", "heart", "tools"),
         "settings" to listOf("settings", "setting", "pengaturan", "setelan", "gear", "config", "preferences", "options")
     )

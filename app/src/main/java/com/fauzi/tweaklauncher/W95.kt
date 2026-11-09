@@ -127,7 +127,7 @@ fun W95Frame(vm: MainVm) {
 internal fun W95Icon(kind: Int, dp: Dp) {
     val cfg = LocalCfg.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val slot = when (kind) { 0 -> "computer"; 1 -> "folder"; 2 -> "panel"; else -> "start" }
+    val slot = when (kind) { 0 -> "computer"; 1 -> "folder"; 2 -> "panel"; 4 -> "winamp"; else -> "start" }
     val packBmp = cfg.sysIcon(slot)?.let { IconPack.get(ctx, it) }
     if (packBmp != null) {
         androidx.compose.foundation.Image(
@@ -137,6 +137,10 @@ internal fun W95Icon(kind: Int, dp: Dp) {
             colorFilter = if (cfg.packGray) IconPack.GRAY else null,
             modifier = Modifier.size(dp)
         )
+        return
+    }
+    if (kind == 4) {
+        WinampIcon(dp)
         return
     }
     Canvas(Modifier.size(dp)) {
@@ -244,7 +248,8 @@ private fun W95Desktop(vm: MainVm) {
                         DeskItem.Sys("Panel Kontrol", 2) {
                             vm.settingsPage = ""
                             vm.w95Open(Screen.Settings)
-                        }
+                        },
+                        DeskItem.Sys("Winamp", 4) { vm.openGame("winamp") }
                     ),
                     Modifier.weight(1f).fillMaxHeight()
                 ) { l, k, m, c -> W95Shortcut(l, k, m, c) }
@@ -531,7 +536,7 @@ private fun BoxScopeStart(vm: MainVm) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    WinampIcon(28.dp)
+                    W95Icon(4, 28.dp)
                     Text("Winamp", color = Color.Black, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
                 }
                 W95MenuRow("Komputer Saya", 0) { vm.w95Open(Screen.Care) }

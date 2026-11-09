@@ -168,7 +168,8 @@ private fun XpDesktop(vm: MainVm) {
                         DeskItem.Sys("Panel Kontrol", 2) {
                             vm.settingsPage = ""
                             vm.w95Open(Screen.Settings)
-                        }
+                        },
+                        DeskItem.Sys("Winamp", 4) { vm.openGame("winamp") }
                     ),
                     Modifier.weight(1f).fillMaxHeight()
                 ) { l, k, m, c -> XpShortcut(l, k, m, c) }
@@ -546,7 +547,7 @@ private fun XpStartPanel(vm: MainVm) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    WinampIcon(24.dp)
+                    W95Icon(4, 24.dp)
                     Text("Winamp", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
             }

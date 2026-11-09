@@ -144,6 +144,8 @@ object WaHub {
     var shuffle by mutableStateOf(false)
     var repeat by mutableStateOf(false)
     var preset by mutableIntStateOf(0)
+    var showEq by mutableStateOf(false)
+    var showPl by mutableStateOf(false)
 
     fun refresh(ctx: Context) {
         val (n, c) = readSession(ctx)
@@ -207,10 +209,12 @@ fun WinampWindow(vm: MainVm, w: GameWin, maxW: Float, maxH: Float) {
     val minX = -maxW * 0.6f
     val maxX = maxW - with(d) { 90.dp.toPx() }
     val maxY = maxH - with(d) { 50.dp.toPx() }
-    val title = when (w.kind) {
-        "waeq" -> "WINAMP EQUALIZER"
-        "wapl" -> "WINAMP PLAYLIST"
-        else -> "WINAMP"
+    val dragMod = Modifier.pointerInput(Unit) {
+        detectDragGestures { change, drag ->
+            change.consume()
+            w.x = (w.x + drag.x).coerceIn(minX, maxX)
+            w.y = (w.y + drag.y).coerceIn(0f, maxY)
+        }
     }
     Column(
         Modifier
@@ -227,34 +231,40 @@ fun WinampWindow(vm: MainVm, w: GameWin, maxW: Float, maxH: Float) {
                 }
             }
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color(0xFF5C617F), Color(0xFF30334A))))
-                .pointerInput(Unit) {
-                    detectDragGestures { change, drag ->
-                        change.consume()
-                        w.x = (w.x + drag.x).coerceIn(minX, maxX)
-                        w.y = (w.y + drag.y).coerceIn(0f, maxY)
-                    }
-                }
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            WaStripes(Modifier.weight(1f))
-            Text(title, color = Color(0xFFE8EAF8), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            WaStripes(Modifier.weight(1f))
-            Box(
-                Modifier.size(14.dp).background(WA_BTN).waBevel(true).clickable { vm.gameWins.remove(w) },
-                contentAlignment = Alignment.Center
-            ) { Text("x", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+        WaTitle("WINAMP", dragMod) { vm.gameWins.remove(w) }
+        WaMain(vm)
+        // Equalizer dan Playlist menempel di bawah jendela utama, ikut tergeser bersama.
+        if (WaHub.showEq) {
+            Spacer(Modifier.height(2.dp))
+            WaTitle("WINAMP EQUALIZER", dragMod) { WaHub.showEq = false }
+            WaEq()
         }
-        when (w.kind) {
-            "waeq" -> WaEq()
-            "wapl" -> WaPlaylist(vm)
-            else -> WaMain(vm)
+        if (WaHub.showPl) {
+            Spacer(Modifier.height(2.dp))
+            WaTitle("WINAMP PLAYLIST", dragMod) { WaHub.showPl = false }
+            WaPlaylist(vm)
         }
+    }
+}
+
+@Composable
+private fun WaTitle(title: String, dragMod: Modifier, onClose: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color(0xFF5C617F), Color(0xFF30334A))))
+            .then(dragMod)
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        WaStripes(Modifier.weight(1f))
+        Text(title, color = Color(0xFFE8EAF8), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        WaStripes(Modifier.weight(1f))
+        Box(
+            Modifier.size(16.dp).background(WA_BTN).waBevel(true).clickable(onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) { Text("x", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -285,7 +295,7 @@ private fun Modifier.waBevel(raised: Boolean): Modifier = this.drawBehind {
 @Composable
 private fun WaToggle(text: String, on: Boolean, width: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
     Box(
-        Modifier.width(width).height(16.dp).background(WA_BTN).waBevel(!on).clickable(onClick = onClick),
+        Modifier.width(width).height(20.dp).background(WA_BTN).waBevel(!on).clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -317,8 +327,8 @@ private fun WaMain(vm: MainVm) {
     val am = remember { ctx.getSystemService(AudioManager::class.java) }
     val maxVol = remember { am?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15 }
     var vol by remember { mutableFloatStateOf((am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0).toFloat() / maxVol) }
-    val eqOpen = vm.gameWins.any { it.kind == "waeq" }
-    val plOpen = vm.gameWins.any { it.kind == "wapl" }
+    val eqOpen = WaHub.showEq
+    val plOpen = WaHub.showPl
 
     Column(Modifier.padding(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -403,8 +413,8 @@ private fun WaMain(vm: MainVm) {
             }, onDone = {})
             Lcd("${(vol * 100).roundToInt()}", true, 9)
             Spacer(Modifier.weight(1f))
-            WaToggle("EQ", eqOpen, 30.dp) { vm.toggleGame("waeq") }
-            WaToggle("PL", plOpen, 30.dp) { vm.toggleGame("wapl") }
+            WaToggle("EQ", eqOpen, 36.dp) { WaHub.showEq = !WaHub.showEq }
+            WaToggle("PL", plOpen, 36.dp) { WaHub.showPl = !WaHub.showPl }
         }
         // tombol transport
         Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
