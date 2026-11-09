@@ -523,6 +523,17 @@ private fun BoxScopeStart(vm: MainVm) {
             Column(Modifier.weight(1f)) {
                 W95MenuRow("Program", 1, arrow = true, active = sub == 1, onPos = { rowY[1] = it }) { sub = if (sub == 1) 0 else 1 }
                 W95MenuRow("Game", 1, arrow = true, active = sub == 3, onPos = { rowY[3] = it }) { sub = if (sub == 3) 0 else 3 }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { vm.openGame("winamp") }
+                        .padding(horizontal = 8.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    WinampIcon(28.dp)
+                    Text("Winamp", color = Color.Black, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                }
                 W95MenuRow("Komputer Saya", 0) { vm.w95Open(Screen.Care) }
                 W95MenuRow("Setelan", 2, arrow = true, active = sub == 2, onPos = { rowY[2] = it }) { sub = if (sub == 2) 0 else 2 }
                 W95MenuRow("Cari...", 1) { vm.w95Open(Screen.Drawer) }

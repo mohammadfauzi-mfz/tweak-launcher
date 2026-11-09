@@ -538,6 +538,17 @@ private fun XpStartPanel(vm: MainVm) {
                     showAll = false
                     showGames = true
                 }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { vm.openGame("winamp") }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    WinampIcon(24.dp)
+                    Text("Winamp", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
             }
         }
         Row(

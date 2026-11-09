@@ -85,7 +85,7 @@ fun MainVm.gameFront(w: GameWin) {
     }
 }
 
-fun gameTitle(kind: String) = if (kind == "mines") "Minesweeper" else "Solitaire"
+fun gameTitle(kind: String) = when (kind) { "mines" -> "Minesweeper"; "winamp" -> "Winamp"; else -> "Solitaire" }
 
 // ---------------------------------------------------------------- Ikon
 
@@ -135,6 +135,10 @@ fun GameLayer(vm: MainVm, xp: Boolean) {
 
 @Composable
 private fun GameWindow(vm: MainVm, w: GameWin, xp: Boolean, maxW: Float, maxH: Float) {
+    if (w.kind == "winamp") {
+        WinampWindow(vm, w, maxW, maxH)
+        return
+    }
     val d = LocalDensity.current
     val minX = -maxW * 0.6f
     val maxX = maxW - with(d) { 90.dp.toPx() }
