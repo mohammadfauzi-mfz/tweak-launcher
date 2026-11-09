@@ -19,6 +19,11 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,7 +78,7 @@ private val WA_BTN = Color(0xFF4A4E66)
 private val WA_GREEN = Color(0xFF00E000)
 private const val YT_MUSIC = "com.google.android.apps.youtube.music"
 
-private data class NowPlaying(
+data class NowPlaying(
     val reason: String = "", // "perm" = tidak ada izin, "none" = tidak ada pemutar
     val title: String = "",
     val artist: String = "",
@@ -124,6 +129,51 @@ private fun fmt(ms: Long): String {
     return "%02d:%02d".format(s / 60, s % 60)
 }
 
+class WaItem(val id: Long, val text: String, val dur: Long)
+
+/** Data bersama untuk jendela Winamp (utama, equalizer, playlist). */
+object WaHub {
+    var np by mutableStateOf(NowPlaying(reason = "none"))
+    var ctrl: MediaController? = null
+    var queue by mutableStateOf<List<WaItem>>(emptyList())
+    var activeId by mutableLongStateOf(-1L)
+    val history = mutableStateListOf<WaItem>()
+    val eq = mutableStateListOf<Float>().apply { repeat(11) { add(0f) } }
+    var eqOn by mutableStateOf(true)
+    var eqAuto by mutableStateOf(false)
+    var shuffle by mutableStateOf(false)
+    var repeat by mutableStateOf(false)
+    var preset by mutableIntStateOf(0)
+
+    fun refresh(ctx: Context) {
+        val (n, c) = readSession(ctx)
+        np = n
+        ctrl = c
+        val q = try {
+            c?.queue?.map {
+                WaItem(
+                    it.queueId,
+                    (it.description.title?.toString() ?: "") +
+                        (it.description.subtitle?.toString()?.let { s -> if (s.isNotEmpty()) " - $s" else "" } ?: ""),
+                    0L
+                )
+            } ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+        queue = q
+        activeId = c?.playbackState?.activeQueueItemId ?: -1L
+        val label = n.label()
+        if (n.title.isNotEmpty() && history.lastOrNull()?.text != label) {
+            history.add(WaItem(-1L, label, n.dur))
+            while (history.size > 200) history.removeAt(0)
+        }
+    }
+}
+
+fun NowPlaying.label(): String =
+    title.ifEmpty { "(tanpa judul)" } + (if (artist.isNotEmpty()) " - $artist" else "")
+
 @Composable
 fun WinampIcon(dp: androidx.compose.ui.unit.Dp) {
     Canvas(Modifier.size(dp)) {
@@ -139,19 +189,37 @@ fun WinampIcon(dp: androidx.compose.ui.unit.Dp) {
     }
 }
 
+/** Pembaca sesi media: dijalankan sekali selama ada jendela Winamp terbuka. */
+@Composable
+fun WinampPoller() {
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) {
+        while (true) {
+            WaHub.refresh(ctx)
+            delay(500)
+        }
+    }
+}
+
 @Composable
 fun WinampWindow(vm: MainVm, w: GameWin, maxW: Float, maxH: Float) {
     val d = LocalDensity.current
     val minX = -maxW * 0.6f
     val maxX = maxW - with(d) { 90.dp.toPx() }
     val maxY = maxH - with(d) { 50.dp.toPx() }
+    val title = when (w.kind) {
+        "waeq" -> "WINAMP EQUALIZER"
+        "wapl" -> "WINAMP PLAYLIST"
+        else -> "WINAMP"
+    }
     Column(
         Modifier
             .offset { IntOffset(w.x.roundToInt(), w.y.roundToInt()) }
             .zIndex(w.z.toFloat())
             .width(300.dp)
             .background(WA_BG)
-            .border(1.dp, WA_EDGE)
+            .waBevel(true)
+            .padding(2.dp)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -162,7 +230,7 @@ fun WinampWindow(vm: MainVm, w: GameWin, maxW: Float, maxH: Float) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color(0xFF6A6F96), Color(0xFF2A2C40))))
+                .background(Brush.verticalGradient(listOf(Color(0xFF5C617F), Color(0xFF30334A))))
                 .pointerInput(Unit) {
                     detectDragGestures { change, drag ->
                         change.consume()
@@ -170,20 +238,35 @@ fun WinampWindow(vm: MainVm, w: GameWin, maxW: Float, maxH: Float) {
                         w.y = (w.y + drag.y).coerceIn(0f, maxY)
                     }
                 }
-                .padding(horizontal = 6.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            WinampIcon(14.dp)
-            Text(
-                "WINAMP", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center, modifier = Modifier.weight(1f)
-            )
+            WaStripes(Modifier.weight(1f))
+            Text(title, color = Color(0xFFE8EAF8), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            WaStripes(Modifier.weight(1f))
             Box(
-                Modifier.size(18.dp).background(WA_BTN).waBevel(true).clickable { vm.gameWins.remove(w) },
+                Modifier.size(14.dp).background(WA_BTN).waBevel(true).clickable { vm.gameWins.remove(w) },
                 contentAlignment = Alignment.Center
-            ) { Text("x", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("x", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
         }
-        WinampBody(vm)
+        when (w.kind) {
+            "waeq" -> WaEq()
+            "wapl" -> WaPlaylist(vm)
+            else -> WaMain(vm)
+        }
+    }
+}
+
+@Composable
+private fun WaStripes(modifier: Modifier) {
+    Canvas(modifier.height(10.dp)) {
+        val t = 1.dp.toPx()
+        for (k in 0 until 4) {
+            val y = k * 3 * t
+            drawRect(Color(0xFFB0B5D2), Offset(0f, y), Size(size.width, t))
+            drawRect(Color(0xFF1A1C2A), Offset(0f, y + t), Size(size.width, t))
+        }
     }
 }
 
@@ -199,123 +282,278 @@ private fun Modifier.waBevel(raised: Boolean): Modifier = this.drawBehind {
     drawRect(br, Offset(size.width - t, 0f), Size(t, size.height))
 }
 
+@Composable
+private fun WaToggle(text: String, on: Boolean, width: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    Box(
+        Modifier.width(width).height(16.dp).background(WA_BTN).waBevel(!on).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+            color = if (on) Color(0xFF9CFF9C) else Color(0xFFC8CBE0)
+        )
+    }
+}
+
+@Composable
+private fun Lcd(text: String, on: Boolean = true, size: Int = 10) {
+    Text(text, color = if (on) WA_GREEN else Color(0xFF1E5A1E), fontSize = size.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun WinampBody(vm: MainVm) {
+private fun WaMain(vm: MainVm) {
     val ctx = LocalContext.current
-    var np by remember { mutableStateOf(NowPlaying(reason = "none")) }
-    val ctrl = remember { arrayOfNulls<MediaController>(1) }
+    val np = WaHub.np
     var phase by remember { mutableFloatStateOf(0f) }
     var level by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            val (n, c) = readSession(ctx)
-            np = n
-            ctrl[0] = c
-            delay(500)
-        }
-    }
     LaunchedEffect(Unit) {
         while (true) {
             delay(80)
             phase += 0.18f
-            level = if (np.playing) minOf(1f, level + 0.2f) else maxOf(0f, level - 0.12f)
+            level = if (WaHub.np.playing) minOf(1f, level + 0.2f) else maxOf(0f, level - 0.12f)
         }
     }
-
     val am = remember { ctx.getSystemService(AudioManager::class.java) }
     val maxVol = remember { am?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15 }
     var vol by remember { mutableFloatStateOf((am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0).toFloat() / maxVol) }
+    val eqOpen = vm.gameWins.any { it.kind == "waeq" }
+    val plOpen = vm.gameWins.any { it.kind == "wapl" }
 
-    Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            // layar waktu dan spektrum
-            Column(
-                Modifier.width(96.dp).background(WA_DARK).waBevel(false).padding(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+    Column(Modifier.padding(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            // layar kiri: waktu dan spektrum
+            Row(
+                Modifier.width(112.dp).height(54.dp).background(WA_DARK).waBevel(false).padding(horizontal = 4.dp, vertical = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                Text(
-                    (if (np.state == PlaybackState.STATE_PLAYING) "▶ " else if (np.state == PlaybackState.STATE_PAUSED) "❙❙ " else "■ ") + fmt(np.pos),
-                    color = WA_GREEN, fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, maxLines = 1
-                )
-                Canvas(Modifier.fillMaxWidth().height(28.dp)) {
-                    val n = 16
-                    val gap = 2.dp.toPx()
-                    val bw = (size.width - gap * (n - 1)) / n
-                    val seg = 3.dp.toPx()
-                    for (i in 0 until n) {
-                        val a = abs(sin(phase * 1.7f + i * 0.9f) * cos(phase * 0.8f + i * 0.37f))
-                        val h = 0.08f + 0.92f * a * level
-                        val cnt = (h * (size.height / seg)).toInt().coerceAtLeast(1)
-                        for (j in 0 until cnt) {
-                            val col = if (j < 5) Color(0xFF00E000) else if (j < 7) Color(0xFFE0E000) else Color(0xFFE02000)
-                            drawRect(col, Offset(i * (bw + gap), size.height - (j + 1) * seg), Size(bw, seg - 1f))
+                Column(Modifier.fillMaxSize().weight(0.12f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Lcd("\u25B6", np.state == PlaybackState.STATE_PLAYING, 8)
+                    Lcd("\u2759\u2759", np.state == PlaybackState.STATE_PAUSED, 7)
+                    Lcd("\u25A0", np.state != PlaybackState.STATE_PLAYING && np.state != PlaybackState.STATE_PAUSED, 8)
+                }
+                Column(Modifier.weight(0.88f)) {
+                    Text(fmt(np.pos), color = WA_GREEN, fontSize = 25.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, maxLines = 1)
+                    Canvas(Modifier.fillMaxWidth().height(16.dp)) {
+                        val n = 19
+                        val gap = 1.dp.toPx()
+                        val bw = (size.width - gap * (n - 1)) / n
+                        val seg = 2.dp.toPx()
+                        for (i in 0 until n) {
+                            val a = abs(sin(phase * 1.7f + i * 0.9f) * cos(phase * 0.8f + i * 0.37f))
+                            val h = 0.1f + 0.9f * a * level
+                            val cnt = (h * (size.height / seg)).toInt().coerceAtLeast(1)
+                            for (j in 0 until cnt) {
+                                val col = if (j < 4) Color(0xFF20D020) else if (j < 6) Color(0xFFD0D020) else Color(0xFFE08020)
+                                drawRect(col, Offset(i * (bw + gap), size.height - (j + 1) * seg), Size(bw, seg - 0.5f))
+                            }
                         }
                     }
                 }
             }
-            // layar judul
+            // layar kanan: judul dan info
             Column(
-                Modifier.weight(1f).height(66.dp).background(WA_DARK).waBevel(false).padding(6.dp),
+                Modifier.weight(1f).height(54.dp).background(WA_DARK).waBevel(false).padding(horizontal = 5.dp, vertical = 3.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                val line = when {
-                    np.reason == "perm" -> "Izinkan akses notifikasi untuk membaca pemutar"
-                    np.reason == "none" -> "Belum ada pemutar aktif. Putar lagu di YouTube Music."
-                    else -> (np.title.ifEmpty { "(tanpa judul)" }) + (if (np.artist.isNotEmpty()) " - " + np.artist else "") +
-                        (if (np.dur > 0) " (" + fmt(np.dur) + ")" else "")
+                val line = when (np.reason) {
+                    "perm" -> "Izinkan akses notifikasi untuk membaca pemutar"
+                    "none" -> "Belum ada pemutar aktif. Putar lagu di YouTube Music."
+                    else -> np.label() + (if (np.dur > 0) " (" + fmt(np.dur) + ")" else "")
                 }
                 Text(
-                    line, color = WA_GREEN, fontSize = 13.sp, fontFamily = FontFamily.Monospace,
+                    line, color = WA_GREEN, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
                     maxLines = 1, softWrap = false,
                     modifier = Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE)
                 )
-                Text(
-                    when (np.state) {
+                when (np.reason) {
+                    "perm" -> Text("[ IZINKAN ]", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { vm.openNotifAccess() })
+                    "none" -> Text("[ BUKA YT MUSIC ]", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { vm.launchApp(YT_MUSIC) })
+                    else -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Lcd("--", true, 9); Lcd("kbps", false, 8)
+                        Lcd("--", true, 9); Lcd("kHz", false, 8)
+                        Spacer(Modifier.weight(1f))
+                        Lcd("mono", false, 8)
+                        Lcd("stereo", np.playing, 8)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Lcd(if (np.pkg == YT_MUSIC) "YT MUSIC" else np.pkg.substringAfterLast('.').uppercase(), np.pkg.isNotEmpty(), 8)
+                    Lcd(when (np.state) {
                         PlaybackState.STATE_PLAYING -> "PLAY"
                         PlaybackState.STATE_BUFFERING -> "MEMUAT"
                         PlaybackState.STATE_PAUSED -> "JEDA"
                         else -> "STOP"
-                    } + if (np.pkg == YT_MUSIC) "  YT MUSIC" else if (np.pkg.isNotEmpty()) "  " + np.pkg.substringAfterLast('.').uppercase() else "",
-                    color = Color(0xFF8AE08A), fontSize = 11.sp, fontFamily = FontFamily.Monospace, maxLines = 1
-                )
-                if (np.reason == "perm") {
-                    Text(
-                        "[ IZINKAN ]", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { vm.openNotifAccess() }
-                    )
-                } else if (np.reason == "none") {
-                    Text(
-                        "[ BUKA YT MUSIC ]", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { vm.launchApp(YT_MUSIC) }
-                    )
+                    }, true, 8)
                 }
             }
         }
         // bar posisi
         val frac = if (np.dur > 0) (np.pos.toFloat() / np.dur).coerceIn(0f, 1f) else 0f
-        WaSlider(frac, np.dur > 0, Modifier.fillMaxWidth(), thumbWide = true, onChange = {}, onDone = { f ->
-            ctrl[0]?.transportControls?.seekTo((np.dur * f).toLong())
+        WaSlider(frac, np.dur > 0, Modifier.fillMaxWidth(), thumbWide = true, gradient = false, onChange = {}, onDone = { f ->
+            WaHub.ctrl?.transportControls?.seekTo((np.dur * f).toLong())
         })
-        // volume
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("VOL", color = WA_GREEN, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-            WaSlider(vol, true, Modifier.weight(1f), thumbWide = false, onChange = { f ->
+        // volume, EQ, PL
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            WaSlider(vol, true, Modifier.width(150.dp), thumbWide = false, gradient = true, onChange = { f ->
                 vol = f
                 am?.setStreamVolume(AudioManager.STREAM_MUSIC, (f * maxVol).roundToInt(), 0)
             }, onDone = {})
-            Text("${(vol * 100).roundToInt()}%", color = WA_GREEN, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+            Lcd("${(vol * 100).roundToInt()}", true, 9)
+            Spacer(Modifier.weight(1f))
+            WaToggle("EQ", eqOpen, 30.dp) { vm.toggleGame("waeq") }
+            WaToggle("PL", plOpen, 30.dp) { vm.toggleGame("wapl") }
         }
         // tombol transport
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            WaKey(0) { ctrl[0]?.transportControls?.skipToPrevious() }
-            WaKey(1) { ctrl[0]?.transportControls?.play() }
-            WaKey(2) { ctrl[0]?.transportControls?.pause() }
-            WaKey(3) { ctrl[0]?.transportControls?.stop() }
-            WaKey(4) { ctrl[0]?.transportControls?.skipToNext() }
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+            WaKey(0) { WaHub.ctrl?.transportControls?.skipToPrevious() }
+            WaKey(1) { WaHub.ctrl?.transportControls?.play() }
+            WaKey(2) { WaHub.ctrl?.transportControls?.pause() }
+            WaKey(3) { WaHub.ctrl?.transportControls?.stop() }
+            WaKey(4) { WaHub.ctrl?.transportControls?.skipToNext() }
+            WaKey(5) { vm.launchApp(WaHub.ctrl?.packageName ?: YT_MUSIC) }
             Spacer(Modifier.weight(1f))
-            WaKey(5) { vm.launchApp(ctrl[0]?.packageName ?: YT_MUSIC) }
+            WaToggle("SHUFFLE", WaHub.shuffle, 52.dp) { WaHub.shuffle = !WaHub.shuffle }
+            WaToggle("\u21BB", WaHub.repeat, 26.dp) { WaHub.repeat = !WaHub.repeat }
+        }
+    }
+}
+
+// ---------------------------------------------------------------- Equalizer
+
+private val EQ_LABELS = listOf("70", "180", "320", "600", "1K", "3K", "6K", "12K", "14K", "16K")
+private val EQ_PRESETS = listOf(
+    "Flat" to List(11) { 0f },
+    "Rock" to listOf(0f, 0.45f, 0.3f, 0.1f, -0.2f, -0.3f, 0.1f, 0.3f, 0.5f, 0.5f, 0.5f),
+    "Pop" to listOf(0f, -0.2f, 0.1f, 0.3f, 0.45f, 0.3f, 0f, -0.1f, -0.2f, -0.2f, -0.2f),
+    "Bass" to listOf(0f, 0.7f, 0.6f, 0.45f, 0.2f, 0f, 0f, 0f, 0f, 0f, 0f),
+    "Treble" to listOf(0f, 0f, 0f, 0f, 0f, 0f, 0.2f, 0.4f, 0.6f, 0.7f, 0.7f),
+    "Vokal" to listOf(0f, -0.3f, -0.2f, 0f, 0.4f, 0.5f, 0.4f, 0.2f, 0f, -0.1f, -0.2f)
+)
+
+@Composable
+private fun WaEq() {
+    Column(Modifier.padding(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            WaToggle("ON", WaHub.eqOn, 32.dp) { WaHub.eqOn = !WaHub.eqOn }
+            WaToggle("AUTO", WaHub.eqAuto, 38.dp) { WaHub.eqAuto = !WaHub.eqAuto }
+            Canvas(Modifier.weight(1f).height(26.dp).background(WA_DARK).waBevel(false)) {
+                val n = 10
+                val p = Path()
+                for (i in 0 until n) {
+                    val x = size.width * (i + 0.5f) / n
+                    val y = size.height * (0.5f - 0.45f * WaHub.eq[i + 1])
+                    if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
+                }
+                drawPath(p, if (WaHub.eqOn) Color(0xFF20D020) else Color(0xFF1E5A1E), style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))
+            }
+            WaToggle("PRESETS", false, 56.dp) {
+                WaHub.preset = (WaHub.preset + 1) % EQ_PRESETS.size
+                EQ_PRESETS[WaHub.preset].second.forEachIndexed { i, v -> WaHub.eq[i] = v }
+            }
+        }
+        Text(EQ_PRESETS[WaHub.preset].first, color = Color(0xFF8AE08A), fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.width(28.dp).height(62.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Lcd("+12db", true, 8)
+                Lcd("0 db", true, 8)
+                Lcd("-12db", true, 8)
+            }
+            Column(Modifier.width(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                WaVSlider(WaHub.eq[0]) { WaHub.eq[0] = it }
+                Lcd("PRE", true, 8)
+            }
+            Spacer(Modifier.width(6.dp))
+            for (i in 0 until 10) {
+                Column(Modifier.width(21.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    WaVSlider(WaHub.eq[i + 1]) { WaHub.eq[i + 1] = it }
+                    Lcd(EQ_LABELS[i], true, 7)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaVSlider(value: Float, onChange: (Float) -> Unit) {
+    var h by remember { mutableIntStateOf(1) }
+    Box(
+        Modifier
+            .width(16.dp)
+            .height(62.dp)
+            .onSizeChanged { h = it.height.coerceAtLeast(1) }
+            .pointerInput(Unit) {
+                detectTapGestures { o -> onChange((1f - 2f * (o.y / h)).coerceIn(-1f, 1f)) }
+            }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, _ ->
+                    change.consume()
+                    onChange((1f - 2f * (change.position.y / h)).coerceIn(-1f, 1f))
+                }
+            }
+            .drawBehind {
+                val gw = 6.dp.toPx()
+                val gx = (size.width - gw) / 2f
+                drawRect(
+                    Brush.verticalGradient(listOf(Color(0xFFE02020), Color(0xFFE0E020), Color(0xFF20C020))),
+                    Offset(gx, 0f), Size(gw, size.height)
+                )
+                drawRect(Color(0x99000000), Offset(gx, 0f), Size(gw, size.height))
+                val th = 8.dp.toPx()
+                val y = (size.height - th) * (1f - value) / 2f
+                drawRect(Color(0xFFB0B4CC), Offset(0f, y), Size(size.width, th))
+                drawRect(Color(0xFF10101A), Offset(0f, y), Size(size.width, th), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+                drawRect(Color(0xFF10101A), Offset(0f, y + th / 2f), Size(size.width, 1.dp.toPx()))
+            }
+    )
+}
+
+// ---------------------------------------------------------------- Playlist
+
+@Composable
+private fun WaPlaylist(vm: MainVm) {
+    val np = WaHub.np
+    val useQueue = WaHub.queue.isNotEmpty()
+    val items = if (useQueue) WaHub.queue else WaHub.history.toList()
+    val cur = np.label()
+    Column(Modifier.padding(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            Modifier.fillMaxWidth().height(150.dp).background(WA_DARK).waBevel(false)
+                .verticalScroll(rememberScrollState()).padding(horizontal = 5.dp, vertical = 3.dp)
+        ) {
+            if (items.isEmpty()) {
+                Text(
+                    if (np.reason == "perm") "Izinkan akses notifikasi dulu." else "Playlist kosong. Lagu yang diputar akan tercatat di sini.",
+                    color = Color(0xFF8AE08A), fontSize = 11.sp, fontFamily = FontFamily.Monospace
+                )
+            }
+            items.forEachIndexed { i, it ->
+                val now = if (useQueue) it.id == WaHub.activeId else (np.title.isNotEmpty() && it.text == cur && i == items.lastIndex)
+                Row(
+                    Modifier.fillMaxWidth().clickable {
+                        if (useQueue) WaHub.ctrl?.transportControls?.skipToQueueItem(it.id)
+                    }.padding(vertical = 1.dp)
+                ) {
+                    Text(
+                        "${i + 1}. ${it.text}", color = if (now) Color.White else WA_GREEN, fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace, maxLines = 1, modifier = Modifier.weight(1f)
+                    )
+                    val dur = if (now && np.dur > 0) np.dur else it.dur
+                    if (dur > 0) Text(" " + fmt(dur).trimStart('0').ifEmpty { "0" }.let { s -> if (s.startsWith(":")) "0$s" else s }, color = if (now) Color.White else WA_GREEN, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            WaToggle("ADD", false, 32.dp) { vm.launchApp(WaHub.ctrl?.packageName ?: YT_MUSIC) }
+            WaToggle("REM", false, 32.dp) { WaHub.history.clear() }
+            WaToggle("SEL", false, 32.dp) {}
+            WaToggle("MISC", false, 36.dp) {}
+            Spacer(Modifier.weight(1f))
+            Lcd(fmt(np.pos).trimStart('0').ifEmpty { "0" } + "/" + (if (np.dur > 0) fmt(np.dur) else "--:--"), true, 9)
+            Spacer(Modifier.weight(1f))
+            WaToggle("LIST OPTS", false, 56.dp) {}
         }
     }
 }
@@ -326,6 +564,7 @@ private fun WaSlider(
     enabled: Boolean,
     modifier: Modifier,
     thumbWide: Boolean,
+    gradient: Boolean,
     onChange: (Float) -> Unit,
     onDone: (Float) -> Unit
 ) {
@@ -334,7 +573,7 @@ private fun WaSlider(
     val v = drag ?: value
     Box(
         modifier
-            .height(14.dp)
+            .height(12.dp)
             .onSizeChanged { w = it.width.coerceAtLeast(1) }
             .pointerInput(enabled) {
                 if (enabled) detectTapGestures { o ->
@@ -362,8 +601,16 @@ private fun WaSlider(
                 val gh = 6.dp.toPx()
                 val gy = (size.height - gh) / 2f
                 drawRect(WA_DARK, Offset(0f, gy), Size(size.width, gh))
-                drawRect(Color(0xFF00A000), Offset(0f, gy), Size(size.width * v, gh))
-                val tw = (if (thumbWide) 28.dp else 12.dp).toPx()
+                if (gradient) {
+                    drawRect(
+                        Brush.horizontalGradient(listOf(Color(0xFF20C020), Color(0xFFE0E020), Color(0xFFE02020))),
+                        Offset(0f, gy), Size(size.width, gh)
+                    )
+                    drawRect(Color(0xCC000000), Offset(size.width * v, gy), Size(size.width * (1f - v), gh))
+                } else {
+                    drawRect(Color(0xFF00A000), Offset(0f, gy), Size(size.width * v, gh))
+                }
+                val tw = (if (thumbWide) 26.dp else 12.dp).toPx()
                 val tx = (size.width - tw) * v
                 drawRect(if (enabled) Color(0xFFB0B4CC) else Color(0xFF5A5E74), Offset(tx, 0f), Size(tw, size.height))
                 drawRect(Color(0xFF10101A), Offset(tx, 0f), Size(tw, size.height), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
@@ -375,10 +622,10 @@ private fun WaSlider(
 @Composable
 private fun WaKey(kind: Int, onClick: () -> Unit) {
     Box(
-        Modifier.width(40.dp).height(24.dp).background(WA_BTN).waBevel(true).clickable(onClick = onClick),
+        Modifier.width(30.dp).height(20.dp).background(WA_BTN).waBevel(true).clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.size(12.dp)) {
+        Canvas(Modifier.size(10.dp)) {
             val w = size.width
             val h = size.height
             val c = Color(0xFFE8EAF8)

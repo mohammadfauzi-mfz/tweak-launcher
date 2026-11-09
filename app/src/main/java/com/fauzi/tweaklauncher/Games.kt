@@ -75,7 +75,18 @@ fun MainVm.openGame(kind: String) {
         return
     }
     val n = gameWins.size
+    val main = gameWins.firstOrNull { it.kind == "winamp" }
+    if (main != null && (kind == "waeq" || kind == "wapl")) {
+        gameWins.add(GameWin(gameCounter++, kind, main.x, main.y + (if (kind == "waeq") 400f else 780f), gameZ))
+        return
+    }
     gameWins.add(GameWin(gameCounter++, kind, 30f + n * 40f, 140f + n * 60f, gameZ))
+}
+
+/** Buka jendela jika belum ada, tutup jika sudah terbuka. */
+fun MainVm.toggleGame(kind: String) {
+    val ex = gameWins.firstOrNull { it.kind == kind }
+    if (ex != null) gameWins.remove(ex) else openGame(kind)
 }
 
 fun MainVm.gameFront(w: GameWin) {
@@ -85,7 +96,7 @@ fun MainVm.gameFront(w: GameWin) {
     }
 }
 
-fun gameTitle(kind: String) = when (kind) { "mines" -> "Minesweeper"; "winamp" -> "Winamp"; else -> "Solitaire" }
+fun gameTitle(kind: String) = when (kind) { "mines" -> "Minesweeper"; "winamp" -> "Winamp"; "waeq" -> "Equalizer"; "wapl" -> "Playlist"; else -> "Solitaire" }
 
 // ---------------------------------------------------------------- Ikon
 
@@ -126,6 +137,7 @@ fun CardsIcon(dp: Dp) {
 @Composable
 fun GameLayer(vm: MainVm, xp: Boolean) {
     if (vm.gameWins.isEmpty()) return
+    if (vm.gameWins.any { it.kind == "winamp" || it.kind == "waeq" || it.kind == "wapl" }) WinampPoller()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val maxW = constraints.maxWidth.toFloat()
         val maxH = constraints.maxHeight.toFloat()
@@ -135,7 +147,7 @@ fun GameLayer(vm: MainVm, xp: Boolean) {
 
 @Composable
 private fun GameWindow(vm: MainVm, w: GameWin, xp: Boolean, maxW: Float, maxH: Float) {
-    if (w.kind == "winamp") {
+    if (w.kind == "winamp" || w.kind == "waeq" || w.kind == "wapl") {
         WinampWindow(vm, w, maxW, maxH)
         return
     }
