@@ -149,8 +149,8 @@ fun DnsTestBlock(vm: MainVm) {
                     fontSize = 12.sp
                 )
             }
-            if (r.blocks == true) {
-                Text("Pakai", color = Pal.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { vm.useDns(r.host) })
+            if (r.ms >= 0) {
+                Text("Pakai", color = Pal.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { vm.useDns(r.host) }.padding(horizontal = 8.dp, vertical = 8.dp))
             }
         }
     }
