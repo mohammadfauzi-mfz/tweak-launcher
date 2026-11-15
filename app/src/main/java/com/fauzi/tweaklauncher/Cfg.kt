@@ -168,6 +168,7 @@ class Cfg(ctx: Context) {
     var overlayOn by s("overlayOn", false)
     var overlayPos by s("overlayPos", "topright")
     var overlayAlpha by s("overlayAlpha", 80)
+    var overlayNet by s("overlayNet", true)
 
     // ---- Pembaruan ----
     var autoUpdate by s("autoUpdate", true)

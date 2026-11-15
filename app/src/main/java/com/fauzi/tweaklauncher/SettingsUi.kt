@@ -441,6 +441,7 @@ private fun AutomationPage(vm: MainVm) {
             listOf("topleft" to "Kiri atas", "topright" to "Kanan atas", "botleft" to "Kiri bawah", "botright" to "Kanan bawah"),
             cfg.overlayPos
         ) { cfg.overlayPos = it }
+        SwitchRow("Kecepatan internet", "Tampilkan kecepatan unduh dan unggah saat ini (diperbarui tiap 2 detik)", cfg.overlayNet) { cfg.overlayNet = it }
         IntSlider("Kepekatan overlay", "%", cfg.overlayAlpha, 20, 100) { cfg.overlayAlpha = it }
     }
     val rules = Store.map(cfg.appProfilesJson)

@@ -16,6 +16,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
+import android.net.TrafficStats
 import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
@@ -43,6 +44,31 @@ class TweakService : Service() {
     private lateinit var cfg: Cfg
     private var overlay: TextView? = null
     private var overlayKey = ""
+    private var lastRx = -1L
+    private var lastTx = -1L
+    private var lastT = 0L
+
+    private fun speed(bytesPerSec: Double): String = when {
+        bytesPerSec >= 1_048_576 -> String.format(java.util.Locale.US, "%.1f MB/s", bytesPerSec / 1_048_576)
+        bytesPerSec >= 1024 -> String.format(java.util.Locale.US, "%.0f KB/s", bytesPerSec / 1024)
+        else -> String.format(java.util.Locale.US, "%.0f B/s", bytesPerSec)
+    }
+
+    /** Kecepatan unduh dan unggah sejak pembacaan sebelumnya. */
+    private fun netText(): String {
+        val rx = TrafficStats.getTotalRxBytes()
+        val tx = TrafficStats.getTotalTxBytes()
+        val now = System.currentTimeMillis()
+        if (rx < 0 || tx < 0) return "↓ - ↑ -"
+        val out = if (lastRx < 0 || now <= lastT) "↓ 0 B/s  ↑ 0 B/s" else {
+            val dt = (now - lastT) / 1000.0
+            "↓ " + speed(((rx - lastRx).coerceAtLeast(0)) / dt) + "  ↑ " + speed(((tx - lastTx).coerceAtLeast(0)) / dt)
+        }
+        lastRx = rx
+        lastTx = tx
+        lastT = now
+        return out
+    }
     private var fgPkg: String? = null
     private var lastEvent = 0L
 
@@ -154,7 +180,8 @@ class TweakService : Service() {
             return
         }
         val st = Sys.stats(this)
-        val text = "${st.hz} Hz  •  RAM ${(st.ramPct * 100).toInt()}%  •  ${st.tempText}  •  ${st.battery}%"
+        var text = "${st.hz} Hz  •  RAM ${(st.ramPct * 100).toInt()}%  •  ${st.tempText}  •  ${st.battery}%"
+        if (cfg.overlayNet) text += "\n" + netText()
         val key = cfg.overlayPos
         if (overlay == null || overlayKey != key) {
             removeOverlay()
