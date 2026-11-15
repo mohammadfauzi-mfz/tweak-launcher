@@ -147,6 +147,10 @@ fun CareScreen(vm: MainVm) {
             }
         }
 
+        RunningAppsCard(vm)
+
+        NetworkCard(vm)
+
         FirewallCard(vm)
 
         AdsBlockCard(vm)
