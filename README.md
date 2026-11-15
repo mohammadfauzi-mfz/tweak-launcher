@@ -74,3 +74,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Perawatan: kartu Aplikasi berjalan (hentikan/tidurkan, urut RAM) dan kartu Jaringan (cek kualitas koneksi, sambung ulang, hemat data).
 - Impor paket ikon kini juga .rar (RAR4, via junrar) dan berkas .ico (pembaca ICO sendiri, juga untuk tambah gambar satuan).
 - Overlay monitor: opsi kecepatan internet (unduh/unggah) di baris kedua.
+- Impor RAR5 lewat 7-Zip JBinding (junrar untuk RAR4 dengan cadangan 7-Zip).

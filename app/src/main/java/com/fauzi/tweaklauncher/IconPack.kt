@@ -258,11 +258,23 @@ object IconPack {
             val isRar = n == 4 && head[0] == 0x52.toByte() && head[1] == 0x61.toByte() && head[2] == 0x72.toByte() && head[3] == 0x21.toByte()
             if (isRar) {
                 raw.mkdirs()
-                val ins = ctx.contentResolver.openInputStream(uri) ?: return null
-                ins.use { com.github.junrar.Junrar.extract(it.buffered(), raw) }
-                raw.walkTopDown().filter { it.isFile }.forEach { f ->
-                    val rel = f.relativeTo(raw).path.replace('\\', '/')
-                    if (wantedEntry(rel) && f.length() <= 2_000_000) accept(rel, f.readBytes())
+                try {
+                    val ins = ctx.contentResolver.openInputStream(uri) ?: return null
+                    ins.use { com.github.junrar.Junrar.extract(it.buffered(), raw) }
+                    raw.walkTopDown().filter { it.isFile }.forEach { f ->
+                        val rel = f.relativeTo(raw).path.replace('\\', '/')
+                        if (wantedEntry(rel) && f.length() <= 2_000_000) accept(rel, f.readBytes())
+                    }
+                } catch (e: Throwable) {
+                    // junrar tidak mendukung RAR5 dan RAR tertentu: coba 7-Zip.
+                    raw.deleteRecursively()
+                    try {
+                        Rar7z.extract(ctx, uri, { wantedEntry(it) }, { p, b -> accept(p, b) })
+                    } catch (e2: Throwable) {
+                        lastError = "Gagal membaca RAR: " + (e2.message ?: e2.javaClass.simpleName) +
+                            ". Jika RAR berpassword, simpan ulang tanpa password atau pakai ZIP."
+                        throw e2
+                    }
                 }
                 raw.deleteRecursively()
             } else {
@@ -279,9 +291,6 @@ object IconPack {
         } catch (e: Throwable) {
             tmp.deleteRecursively()
             raw.deleteRecursively()
-            lastError = if (e.javaClass.simpleName.contains("V5")) "RAR versi 5 belum didukung. Simpan ulang sebagai RAR4 atau ZIP."
-            else if (e.javaClass.simpleName.contains("Password") || (e.message ?: "").contains("password", true)) "RAR berpassword tidak didukung."
-            else ""
             return null
         }
         if (widths.isEmpty()) {
@@ -605,7 +614,7 @@ fun ImportPackCard(vm: MainVm) {
         if (uris.isNotEmpty()) vm.addIconImages(ctx, target, uris)
     }
     FoldCard("set_import", "Impor paket ikon (.zip, .rar)", "${packs.size} paket diimpor", defaultOpen = false) {
-        Hint("Pilih berkas .zip atau .rar berisi gambar PNG, WebP, JPG, atau ICO (ukuran terbesar di dalam ICO yang dipakai). RAR versi 5 dan RAR berpassword belum didukung, pakai ZIP untuk itu. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.")
+        Hint("Pilih berkas .zip atau .rar berisi gambar PNG, WebP, JPG, atau ICO (ukuran terbesar di dalam ICO yang dipakai). RAR4 dan RAR5 didukung; RAR berpassword belum. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.")
         ActionButton("Impor paket ikon (.zip, .rar)", Modifier.fillMaxWidth(), primary = true) {
             zip.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream", "*/*"))
         }

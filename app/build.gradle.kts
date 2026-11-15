@@ -66,6 +66,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.github.junrar:junrar:7.5.5")
+    implementation("com.github.omicronapps:7-Zip-JBinding-4Android:Release-16.02-2.02")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
 }
