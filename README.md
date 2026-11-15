@@ -72,3 +72,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Folder aplikasi: isi jendela putih di Win95/XP, dan ikon folder bisa diganti dari ikon paket (tombol Ganti ikon di jendela folder).
 - Jendela folder: tombol pensil (kiri bawah) untuk ubah nama, ganti ikon, tambah/keluarkan aplikasi, hapus folder.
 - Perawatan: kartu Aplikasi berjalan (hentikan/tidurkan, urut RAM) dan kartu Jaringan (cek kualitas koneksi, sambung ulang, hemat data).
+- Impor paket ikon kini juga .rar (RAR4, via junrar) dan berkas .ico (pembaca ICO sendiri, juga untuk tambah gambar satuan).

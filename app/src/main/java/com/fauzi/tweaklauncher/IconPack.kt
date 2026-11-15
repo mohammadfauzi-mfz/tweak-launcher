@@ -201,44 +201,87 @@ object IconPack {
 
     private fun clean(s: String) = s.replace(Regex("[^A-Za-z0-9_.-]"), "_").trim('.', '_').ifEmpty { "ikon" }
 
-    /** Impor .zip berisi PNG, WebP, atau JPG. Mengembalikan (nama paket, jumlah ikon) atau null jika gagal. */
+    /** Pesan galat terakhir dari impor arsip, untuk ditampilkan ke pengguna. */
+    var lastError = ""
+
+    private fun wantedEntry(path: String): Boolean {
+        val base = path.substringAfterLast('/').substringAfterLast('\\')
+        if (path.startsWith("__MACOSX") || base.startsWith("._") || base.startsWith(".")) return false
+        return base.substringAfterLast('.', "").lowercase() in setOf("png", "webp", "jpg", "jpeg", "ico")
+    }
+
+    private fun isIco(bytes: ByteArray, ext: String) =
+        ext == "ico" || (bytes.size > 6 && bytes[0].toInt() == 0 && bytes[1].toInt() == 0 && bytes[2].toInt() == 1 && bytes[3].toInt() == 0)
+
+    /** Decode gambar apa pun yang didukung, termasuk .ico (diurai sendiri karena BitmapFactory tidak andal untuk ICO). */
+    fun decodeAny(bytes: ByteArray, ext: String): Bitmap? {
+        if (isIco(bytes, ext)) {
+            IcoDecoder.decode(bytes)?.let { return it }
+        }
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }
+
+    /** Impor .zip atau .rar berisi PNG, WebP, JPG, atau ICO. Mengembalikan (nama paket, jumlah ikon) atau null jika gagal. */
     fun importZip(ctx: Context, uri: Uri, fileName: String): Pair<String, Int>? {
+        lastError = ""
         val pack = clean(fileName.substringBeforeLast('.', fileName)).take(40)
         val dir = File(packRoot(ctx), pack)
         val tmp = File(packRoot(ctx), ".tmp_$pack")
+        val raw = File(packRoot(ctx), ".raw_$pack")
         tmp.deleteRecursively()
+        raw.deleteRecursively()
         tmp.mkdirs()
         // nama dasar -> (lebar terbesar)
         val widths = HashMap<String, Int>()
         var count = 0
+
+        fun accept(path: String, bytes: ByteArray) {
+            if (bytes.size > 2_000_000) return
+            val base = path.substringAfterLast('/').substringAfterLast('\\')
+            val ext = base.substringAfterLast('.', "").lowercase()
+            val bmp = decodeAny(bytes, ext) ?: return
+            if (bmp.width > 512 || bmp.height > 512) return
+            // "nama-2" dan sejenisnya dianggap varian ukuran dari ikon yang sama
+            val stem = base.substringBeforeLast('.')
+            val name = clean(stem.replace(Regex("-\\d+$"), ""))
+            val prev = widths[name]
+            if (prev != null && prev >= bmp.width) return
+            if (prev == null && count >= 4000) return
+            if (prev == null) count++
+            widths[name] = bmp.width
+            File(tmp, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
+
         try {
-            val ins = ctx.contentResolver.openInputStream(uri) ?: return null
-            ZipInputStream(ins.buffered()).use { z ->
-                while (true) {
-                    val e = z.nextEntry ?: break
-                    if (e.isDirectory) continue
-                    val path = e.name
-                    val base = path.substringAfterLast('/')
-                    if (path.startsWith("__MACOSX") || base.startsWith("._") || base.startsWith(".")) continue
-                    val ext = base.substringAfterLast('.', "").lowercase()
-                    if (ext != "png" && ext != "webp" && ext != "jpg" && ext != "jpeg") continue
-                    val bytes = z.readBytes()
-                    if (bytes.size > 2_000_000) continue
-                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: continue
-                    if (bmp.width > 512 || bmp.height > 512) continue
-                    // "nama-2" dan sejenisnya dianggap varian ukuran dari ikon yang sama
-                    val stem = base.substringBeforeLast('.')
-                    val name = clean(stem.replace(Regex("-\\d+$"), ""))
-                    val prev = widths[name]
-                    if (prev != null && prev >= bmp.width) continue
-                    if (prev == null && count >= 4000) continue
-                    if (prev == null) count++
-                    widths[name] = bmp.width
-                    File(tmp, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            val head = ByteArray(4)
+            val n = ctx.contentResolver.openInputStream(uri)?.use { it.read(head) } ?: return null
+            val isRar = n == 4 && head[0] == 0x52.toByte() && head[1] == 0x61.toByte() && head[2] == 0x72.toByte() && head[3] == 0x21.toByte()
+            if (isRar) {
+                raw.mkdirs()
+                val ins = ctx.contentResolver.openInputStream(uri) ?: return null
+                ins.use { com.github.junrar.Junrar.extract(it.buffered(), raw) }
+                raw.walkTopDown().filter { it.isFile }.forEach { f ->
+                    val rel = f.relativeTo(raw).path.replace('\\', '/')
+                    if (wantedEntry(rel) && f.length() <= 2_000_000) accept(rel, f.readBytes())
+                }
+                raw.deleteRecursively()
+            } else {
+                val ins = ctx.contentResolver.openInputStream(uri) ?: return null
+                ZipInputStream(ins.buffered()).use { z ->
+                    while (true) {
+                        val e = z.nextEntry ?: break
+                        if (e.isDirectory) continue
+                        if (!wantedEntry(e.name)) continue
+                        accept(e.name, z.readBytes())
+                    }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             tmp.deleteRecursively()
+            raw.deleteRecursively()
+            lastError = if (e.javaClass.simpleName.contains("V5")) "RAR versi 5 belum didukung. Simpan ulang sebagai RAR4 atau ZIP."
+            else if (e.javaClass.simpleName.contains("Password") || (e.message ?: "").contains("password", true)) "RAR berpassword tidak didukung."
+            else ""
             return null
         }
         if (widths.isEmpty()) {
@@ -263,12 +306,14 @@ object IconPack {
                 val name = clean(displayName(ctx, u).substringBeforeLast('.').ifEmpty { "ikon" })
                 val b = ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } ?: throw IllegalStateException()
                 if (b.size > 12_000_000) throw IllegalStateException()
-                val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeByteArray(b, 0, b.size, o)
-                var sample = 1
-                while (o.outWidth / sample > 1024 || o.outHeight / sample > 1024) sample *= 2
-                var bmp = BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = sample })
-                    ?: throw IllegalStateException()
+                val ext = displayName(ctx, u).substringAfterLast('.', "").lowercase()
+                var bmp: Bitmap = (if (isIco(b, ext)) IcoDecoder.decode(b) else null) ?: run {
+                    val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(b, 0, b.size, o)
+                    var sample = 1
+                    while (o.outWidth / sample > 1024 || o.outHeight / sample > 1024) sample *= 2
+                    BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = sample })
+                } ?: throw IllegalStateException()
                 val m = maxOf(bmp.width, bmp.height)
                 if (m > 512) {
                     val f = 512f / m
@@ -369,7 +414,7 @@ fun MainVm.importIconPack(ctx: Context, uri: Uri) {
         val r = withContext(Dispatchers.IO) {
             IconPack.importZip(ctx, uri, IconPack.displayName(ctx, uri).ifEmpty { "paket" })
         }
-        packMsg = if (r == null) "Gagal: zip kosong atau tidak berisi gambar PNG, WebP, atau JPG (berkas .ico tidak bisa dibaca Android)."
+        packMsg = if (r == null) IconPack.lastError.ifEmpty { "Gagal: arsip kosong atau tidak berisi gambar PNG, WebP, JPG, atau ICO." }
         else "Paket \"${r.first}\" masuk: ${r.second} ikon."
         packRev++
     }
@@ -559,19 +604,19 @@ fun ImportPackCard(vm: MainVm) {
     val imgs = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) vm.addIconImages(ctx, target, uris)
     }
-    FoldCard("set_import", "Impor paket ikon (.zip)", "${packs.size} paket diimpor", defaultOpen = false) {
-        Hint("Pilih berkas .zip berisi gambar PNG, WebP, atau JPG. Berkas .ico tidak bisa dibaca Android, ubah dulu ke PNG. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.")
-        ActionButton("Impor paket ikon (.zip)", Modifier.fillMaxWidth(), primary = true) {
+    FoldCard("set_import", "Impor paket ikon (.zip, .rar)", "${packs.size} paket diimpor", defaultOpen = false) {
+        Hint("Pilih berkas .zip atau .rar berisi gambar PNG, WebP, JPG, atau ICO (ukuran terbesar di dalam ICO yang dipakai). RAR versi 5 dan RAR berpassword belum didukung, pakai ZIP untuk itu. Paket tampil di galeri ikon dan bisa dipakai tebak otomatis jika nama berkas mirip nama aplikasi.")
+        ActionButton("Impor paket ikon (.zip, .rar)", Modifier.fillMaxWidth(), primary = true) {
             zip.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream", "*/*"))
         }
         Text("Tambah gambar satuan ke paket", color = Pal.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        Hint("Pilih paket tujuan, lalu pilih satu atau beberapa gambar PNG/WebP/JPG. Nama berkas jadi nama ikon (misalnya whatsapp.png), jadi tebak otomatis ikut mengenalinya. Nama yang sama menimpa ikon lama. Gambar besar dikecilkan ke 512 px.")
+        Hint("Pilih paket tujuan, lalu pilih satu atau beberapa gambar PNG/WebP/JPG/ICO. Nama berkas jadi nama ikon (misalnya whatsapp.png), jadi tebak otomatis ikut mengenalinya. Nama yang sama menimpa ikon lama. Gambar besar dikecilkan ke 512 px.")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             val all = (packs + "Ikon_saya").distinct()
             all.forEach { p -> Pill(if (p == "Ikon_saya" && p !in packs) "Ikon_saya (baru)" else p, target == p) { target = p } }
         }
         ActionButton("Tambah gambar ke \"$target\"", Modifier.fillMaxWidth()) {
-            imgs.launch(arrayOf("image/*"))
+            imgs.launch(arrayOf("image/*", "image/x-icon", "image/vnd.microsoft.icon", "application/octet-stream"))
         }
         if (vm.packMsg.isNotEmpty()) Text(vm.packMsg, color = Pal.sub, fontSize = 12.sp)
         packs.forEach { p ->
