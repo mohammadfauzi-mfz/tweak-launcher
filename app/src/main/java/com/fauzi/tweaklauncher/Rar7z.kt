@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import net.sf.sevenzipjbinding.IInArchive
 import net.sf.sevenzipjbinding.ISequentialOutStream
+import net.sf.sevenzipjbinding.PropID
 import net.sf.sevenzipjbinding.SevenZip
 import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream
 import java.io.ByteArrayOutputStream
@@ -22,13 +23,14 @@ object Rar7z {
         try {
             raf = RandomAccessFile(tmp, "r")
             arc = SevenZip.openInArchive(null, RandomAccessFileInStream(raf))
-            for (item in arc.simpleInArchive.archiveItems) {
-                if (item.isFolder) continue
-                val path = (item.path ?: continue).replace('\\', '/')
+            for (i in 0 until arc.numberOfItems) {
+                if (arc.getProperty(i, PropID.IS_FOLDER) == true) continue
+                val path = (arc.getProperty(i, PropID.PATH) as? String ?: continue).replace('\\', '/')
                 if (!wanted(path)) continue
-                if ((item.size ?: 0L) > 2_000_000L) continue
+                val size = (arc.getProperty(i, PropID.SIZE) as? Number)?.toLong() ?: 0L
+                if (size > 2_000_000L) continue
                 val bos = ByteArrayOutputStream()
-                item.extractSlow(ISequentialOutStream { d ->
+                arc.extractSlow(i, ISequentialOutStream { d ->
                     bos.write(d)
                     d.size
                 })
