@@ -568,7 +568,7 @@ class MainVm(private val app: Application) : AndroidViewModel(app) {
     // ---------------- Layanan latar ----------------
 
     fun syncService() {
-        if (cfg.overlayOn || cfg.autoApp || cfg.autoSched) {
+        if (cfg.bgNeeded()) {
             try {
                 ContextCompat.startForegroundService(app, Intent(app, TweakService::class.java))
             } catch (e: Exception) {

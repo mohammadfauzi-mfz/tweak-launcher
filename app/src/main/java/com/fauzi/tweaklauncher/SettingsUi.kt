@@ -441,8 +441,51 @@ private fun AutomationPage(vm: MainVm) {
             listOf("topleft" to "Kiri atas", "topright" to "Kanan atas", "botleft" to "Kiri bawah", "botright" to "Kanan bawah"),
             cfg.overlayPos
         ) { cfg.overlayPos = it }
-        SwitchRow("Kecepatan internet", "Tampilkan kecepatan unduh dan unggah saat ini (diperbarui tiap 2 detik)", cfg.overlayNet) { cfg.overlayNet = it }
+        Text("Isi overlay", color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text("Pilih yang ingin ditampilkan. Kecepatan internet tampil di baris kedua.", color = Pal.sub, fontSize = 12.sp)
+        val on = cfg.overlayItems.split(",").filter { it.isNotBlank() }.toSet()
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OVERLAY_ITEMS.forEach { (k, label) ->
+                Pill(label, k in on) {
+                    val n = if (k in on) on - k else on + k
+                    cfg.overlayItems = OVERLAY_ITEMS.keys.filter { it in n }.joinToString(",")
+                }
+            }
+        }
         IntSlider("Kepekatan overlay", "%", cfg.overlayAlpha, 20, 100) { cfg.overlayAlpha = it }
+    }
+    val ctxC = LocalContext.current
+    FoldCard("set_chgvoice", "Suara pengisian daya", if (cfg.chgOn) "Aktif" else "Mati", defaultOpen = false) {
+        SwitchRow(
+            "Pemberitahuan suara saat mengisi daya",
+            "HP berbicara saat charger dipasang dan saat baterai mencapai level pilihan. Berjalan lewat layanan latar.",
+            cfg.chgOn
+        ) {
+            cfg.chgOn = it
+            vm.syncService()
+        }
+        SwitchRow("Saat mulai mengisi", "Ucapkan pesan saat charger dipasang", cfg.chgStart) { cfg.chgStart = it }
+        Text("Level baterai yang diumumkan", color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        val lv = cfg.chgLevels.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(20, 30, 40, 50, 60, 70, 80, 90, 100).forEach { n ->
+                Pill("$n%", n in lv) {
+                    val m = if (n in lv) lv - n else lv + n
+                    cfg.chgLevels = m.sorted().joinToString(",")
+                }
+            }
+        }
+        Text("Pesan saat mulai mengisi", color = Pal.sub, fontSize = 12.sp)
+        InputBox(cfg.chgMsgStart, { cfg.chgMsgStart = it }, "mis. Charging started", Modifier.fillMaxWidth())
+        Text("Pesan tiap level ({n} diganti angka persen)", color = Pal.sub, fontSize = 12.sp)
+        InputBox(cfg.chgMsgLevel, { cfg.chgMsgLevel = it }, "mis. Baterai {n} persen", Modifier.fillMaxWidth())
+        Text("Pesan saat 100%", color = Pal.sub, fontSize = 12.sp)
+        InputBox(cfg.chgMsgFull, { cfg.chgMsgFull = it }, "mis. Baterai penuh", Modifier.fillMaxWidth())
+        ChoiceRow("Bahasa suara", listOf("id" to "Indonesia", "en" to "Inggris"), cfg.chgLang) { cfg.chgLang = it }
+        ActionButton("Coba suara", Modifier.fillMaxWidth()) {
+            ChargeVoice.speak(ctxC, cfg.chgMsgLevel.replace("{n}", "60"), cfg.chgLang)
+        }
+        Hint("Pilih bahasa Inggris untuk pesan berbahasa Inggris seperti \"Charging started\". Suara memakai mesin suara HP; pastikan paket suara bahasa itu terpasang. Level hanya diumumkan saat sedang mengisi dan saat angka naik.")
     }
     val rules = Store.map(cfg.appProfilesJson)
     FoldCard("set_rules", "Aplikasi dengan profil khusus", "${rules.size} aplikasi", defaultOpen = false) {

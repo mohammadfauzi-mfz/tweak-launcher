@@ -169,6 +169,14 @@ class Cfg(ctx: Context) {
     var overlayPos by s("overlayPos", "topright")
     var overlayAlpha by s("overlayAlpha", 80)
     var overlayNet by s("overlayNet", true)
+    var overlayItems by s("overlayItems", "hz,ram,temp,bat,net")
+    var chgOn by s("chgOn", false)
+    var chgStart by s("chgStart", true)
+    var chgLevels by s("chgLevels", "60,80,100")
+    var chgMsgStart by s("chgMsgStart", "Pengisian daya dimulai")
+    var chgMsgLevel by s("chgMsgLevel", "Baterai {n} persen")
+    var chgMsgFull by s("chgMsgFull", "Baterai penuh, silakan cabut charger")
+    var chgLang by s("chgLang", "id")
 
     // ---- Pembaruan ----
     var autoUpdate by s("autoUpdate", true)
@@ -194,6 +202,9 @@ class Cfg(ctx: Context) {
     var tabHiddenCsv by s("tabHidden", "")
     var appProfilesJson by s("appProfilesJ", "{}")
     var profilesJson by s("profilesJ", "")
+
+    /** Apakah layanan latar perlu berjalan. */
+    fun bgNeeded(): Boolean = overlayOn || autoApp || autoSched || chgOn
 
     /** Dipanggil VM untuk menyamakan profil yang sedang aktif jika diubah oleh layanan latar. */
     fun syncApplied() {
@@ -281,4 +292,15 @@ val GESTURE_ACTIONS = listOf(
     "lock" to "Kunci layar",
     "settings" to "Setelan launcher",
     "cycle" to "Ganti profil berikutnya"
+)
+
+/** Pilihan isi overlay monitor: kunci -> nama. */
+val OVERLAY_ITEMS = linkedMapOf(
+    "clock" to "Jam",
+    "hz" to "Layar (Hz)",
+    "ram" to "RAM",
+    "temp" to "Suhu",
+    "bat" to "Baterai",
+    "storage" to "Penyimpanan",
+    "net" to "Kecepatan internet"
 )

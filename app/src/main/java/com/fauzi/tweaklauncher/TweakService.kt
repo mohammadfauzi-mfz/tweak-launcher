@@ -9,6 +9,8 @@ import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -47,6 +49,43 @@ class TweakService : Service() {
     private var lastRx = -1L
     private var lastTx = -1L
     private var lastT = 0L
+    private var chgRegistered = false
+    private var lastPlug = -1
+    private var lastPct = -1
+    private var announced = -1
+
+    private val chgReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            val lv = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val sc = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+            if (lv < 0 || sc <= 0) return
+            val pct = lv * 100 / sc
+            val plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)
+            val first = lastPlug < 0
+            val before = lastPlug
+            val beforePct = lastPct
+            lastPlug = plug
+            lastPct = pct
+            if (!cfg.chgOn) return
+            if (plug == 0) {
+                announced = -1
+                return
+            }
+            fun say(t: String) = ChargeVoice.speak(this@TweakService, t.replace("{n}", pct.toString()), cfg.chgLang)
+            if (first) {
+                announced = pct
+            } else if (before == 0) {
+                announced = pct
+                if (cfg.chgStart && cfg.chgMsgStart.isNotBlank()) say(cfg.chgMsgStart)
+            } else if (pct != announced && pct >= beforePct) {
+                val levels = cfg.chgLevels.split(",").mapNotNull { it.trim().toIntOrNull() }
+                if (pct in levels) {
+                    announced = pct
+                    say(if (pct >= 100) cfg.chgMsgFull else cfg.chgMsgLevel)
+                }
+            }
+        }
+    }
 
     private fun speed(bytesPerSec: Double): String = when {
         bytesPerSec >= 1_048_576 -> String.format(java.util.Locale.US, "%.1f MB/s", bytesPerSec / 1_048_576)
@@ -100,11 +139,18 @@ class TweakService : Service() {
         } else {
             startForeground(NID, n)
         }
+        if (!chgRegistered) {
+            try {
+                ContextCompat.registerReceiver(this, chgReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
+                chgRegistered = true
+            } catch (e: Exception) {
+            }
+        }
         if (job == null) {
             job = scope.launch {
                 while (isActive) {
                     cfg.reload()
-                    if (!cfg.overlayOn && !cfg.autoApp && !cfg.autoSched) {
+                    if (!cfg.bgNeeded()) {
                         withContext(Dispatchers.Main) { removeOverlay() }
                         stopSelf()
                         return@launch
@@ -122,6 +168,13 @@ class TweakService : Service() {
     }
 
     override fun onDestroy() {
+        if (chgRegistered) {
+            try {
+                unregisterReceiver(chgReceiver)
+            } catch (e: Exception) {
+            }
+            chgRegistered = false
+        }
         job?.cancel()
         scope.cancel()
         removeOverlay()
@@ -180,8 +233,23 @@ class TweakService : Service() {
             return
         }
         val st = Sys.stats(this)
-        var text = "${st.hz} Hz  •  RAM ${(st.ramPct * 100).toInt()}%  •  ${st.tempText}  •  ${st.battery}%"
-        if (cfg.overlayNet) text += "\n" + netText()
+        val items = cfg.overlayItems.split(",").filter { it.isNotBlank() }.toSet()
+        val parts = ArrayList<String>()
+        if ("clock" in items) parts.add(java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(java.util.Date()))
+        if ("hz" in items) parts.add("${st.hz} Hz")
+        if ("ram" in items) parts.add("RAM ${(st.ramPct * 100).toInt()}%")
+        if ("temp" in items) parts.add(st.tempText)
+        if ("bat" in items) parts.add("${st.battery}%")
+        if ("storage" in items) parts.add("Disk ${(st.storagePct * 100).toInt()}%")
+        var text = parts.joinToString("  •  ")
+        if ("net" in items) {
+            val n = netText()
+            text = if (text.isEmpty()) n else text + "\n" + n
+        }
+        if (text.isEmpty()) {
+            removeOverlay()
+            return
+        }
         val key = cfg.overlayPos
         if (overlay == null || overlayKey != key) {
             removeOverlay()
@@ -251,7 +319,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         try {
             val cfg = Cfg(context)
-            if (cfg.overlayOn || cfg.autoApp || cfg.autoSched) {
+            if (cfg.bgNeeded()) {
                 ContextCompat.startForegroundService(context, Intent(context, TweakService::class.java))
             }
             if (cfg.lockOn) {
