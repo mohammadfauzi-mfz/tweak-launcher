@@ -177,6 +177,7 @@ class Cfg(ctx: Context) {
     var chgMsgLevel by s("chgMsgLevel", "Baterai {n} persen")
     var chgMsgFull by s("chgMsgFull", "Baterai penuh, silakan cabut charger")
     var chgLang by s("chgLang", "id")
+    var chgStream by s("chgStream", "notif")
 
     // ---- Pembaruan ----
     var autoUpdate by s("autoUpdate", true)

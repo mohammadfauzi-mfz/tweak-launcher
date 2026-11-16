@@ -482,10 +482,11 @@ private fun AutomationPage(vm: MainVm) {
         Text("Pesan saat 100%", color = Pal.sub, fontSize = 12.sp)
         InputBox(cfg.chgMsgFull, { cfg.chgMsgFull = it }, "mis. Baterai penuh", Modifier.fillMaxWidth())
         ChoiceRow("Bahasa suara", listOf("id" to "Indonesia", "en" to "Inggris"), cfg.chgLang) { cfg.chgLang = it }
+        ChoiceRow("Saluran suara", listOf("notif" to "Notifikasi", "media" to "Media"), cfg.chgStream) { cfg.chgStream = it }
         ActionButton("Coba suara", Modifier.fillMaxWidth()) {
-            ChargeVoice.speak(ctxC, cfg.chgMsgLevel.replace("{n}", "60"), cfg.chgLang)
+            ChargeVoice.speak(ctxC, cfg.chgMsgLevel.replace("{n}", "60"), cfg.chgLang, cfg.chgStream == "notif")
         }
-        Hint("Pilih bahasa Inggris untuk pesan berbahasa Inggris seperti \"Charging started\". Suara memakai mesin suara HP; pastikan paket suara bahasa itu terpasang. Level hanya diumumkan saat sedang mengisi dan saat angka naik.")
+        Hint("Pilih bahasa Inggris untuk pesan berbahasa Inggris seperti \"Charging started\". Saluran Notifikasi mengikuti volume notifikasi dan mode senyap, saluran Media mengikuti volume media. Suara memakai mesin suara HP; pastikan paket suara bahasa itu terpasang. Level hanya diumumkan saat sedang mengisi dan saat angka naik.")
     }
     val rules = Store.map(cfg.appProfilesJson)
     FoldCard("set_rules", "Aplikasi dengan profil khusus", "${rules.size} aplikasi", defaultOpen = false) {

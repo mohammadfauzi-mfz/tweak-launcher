@@ -71,7 +71,7 @@ class TweakService : Service() {
                 announced = -1
                 return
             }
-            fun say(t: String) = ChargeVoice.speak(this@TweakService, t.replace("{n}", pct.toString()), cfg.chgLang)
+            fun say(t: String) = ChargeVoice.speak(this@TweakService, t.replace("{n}", pct.toString()), cfg.chgLang, cfg.chgStream == "notif")
             if (first) {
                 announced = pct
             } else if (before == 0) {
