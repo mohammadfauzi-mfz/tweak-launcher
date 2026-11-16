@@ -302,6 +302,12 @@ private fun IconsPage(vm: MainVm) {
             vm.apps.take(6).forEach { AppIcon(it, 44.dp, badge = false) }
         }
         IntSlider("Ukuran ikon", " dp", cfg.iconSize, 40, 72) { cfg.iconSize = it }
+        SwitchRow("Ikon garis neon", "Ubah semua ikon asli jadi garis neon berwarna (mode Modern, cocok di tema gelap). Ikon dari paket tidak diubah. Hasil otomatis, ikon yang penuh detail bisa terlihat ramai.", cfg.iconNeon) { cfg.iconNeon = it }
+        if (cfg.iconNeon) {
+            IntSlider("Tebal garis", "", cfg.neonThick, 1, 3) { cfg.neonThick = it }
+            IntSlider("Cahaya", "%", cfg.neonGlow, 0, 100) { cfg.neonGlow = it }
+            ChoiceRow("Warna garis", listOf("auto" to "Warna ikon", "accent" to "Warna aksen"), cfg.neonColor) { cfg.neonColor = it }
+        }
         SwitchRow("Tampilkan nama aplikasi", null, cfg.showLabels) { cfg.showLabels = it }
         if (cfg.showLabels) IntSlider("Ukuran teks nama", " sp", cfg.labelSize, 10, 15) { cfg.labelSize = it }
     }

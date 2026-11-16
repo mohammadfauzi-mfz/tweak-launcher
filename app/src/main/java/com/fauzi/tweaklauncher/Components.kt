@@ -388,7 +388,12 @@ fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean 
                     .alpha(if (dim) 0.45f else 1f)
             )
         } else {
-            Image(
+            val neonBmp = if (cfg.iconNeon && cfg.uiMode == "modern") Neon.rememberNeon(app, cfg) else null
+            if (neonBmp != null) Image(
+                bitmap = neonBmp,
+                contentDescription = app.label,
+                modifier = Modifier.fillMaxSize().alpha(if (dim) 0.45f else 1f)
+            ) else Image(
                 bitmap = app.icon,
                 contentDescription = app.label,
                 colorFilter = if (pda && cfg.pdaMono) LcdFilter else null,

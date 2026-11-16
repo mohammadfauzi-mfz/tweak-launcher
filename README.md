@@ -76,3 +76,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Overlay monitor: opsi kecepatan internet (unduh/unggah) di baris kedua.
 - Impor RAR5 lewat 7-Zip JBinding (junrar untuk RAR4 dengan cadangan 7-Zip).
 - Overlay monitor: isi bisa dipilih. Suara pengisian daya (mulai, level 60/80/100 dst, pesan dan bahasa bisa diubah).
+- Opsi ikon garis neon (Modern): ikon asli diubah otomatis jadi garis neon berwarna dengan glow; tebal, cahaya, warna diatur di Setelan > Ikon.
