@@ -185,7 +185,7 @@ class TweakService : Service() {
 
     private fun autoProfile() {
         if (!cfg.autoApp && !cfg.autoSched) return
-        if (Shell.state() != ShizukuState.READY) return
+        if (!Shell.canSettings()) return
         val profiles = ProfileStore.parse(cfg.profilesJson)
 
         var target: String? = null

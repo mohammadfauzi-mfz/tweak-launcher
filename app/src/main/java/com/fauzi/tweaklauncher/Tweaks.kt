@@ -15,7 +15,7 @@ data class DisplayInfo(
 /** Semua perintah yang berjalan lewat Shizuku. */
 object Tweaks {
 
-    private const val NO_SHIZUKU = "Shizuku belum siap. Jalankan Shizuku dan beri izin dulu."
+    private const val NO_SHIZUKU = "Shizuku belum siap dan mode mandiri belum aktif. Jalankan Shizuku, atau aktifkan Mode mandiri di Setelan > Otomasi."
 
     private fun ready() = Shell.state() == ShizukuState.READY
 
@@ -26,12 +26,11 @@ object Tweaks {
     }
 
     fun apply(cfg: Cfg, p: Profile): TweakResult {
-        if (!ready()) return TweakResult(false, NO_SHIZUKU)
+        if (!Shell.canSettings()) return TweakResult(false, NO_SHIZUKU)
 
-        // Semua perintah digabung jadi satu panggilan supaya cepat.
-        val sb = StringBuilder()
+        val cmds = ArrayList<Pair<String, String>>()
         fun add(label: String, cmd: String) {
-            sb.append("(").append(cmd).append(") >/dev/null 2>&1 || echo FAIL:").append(label).append("; ")
+            cmds.add(label to cmd)
         }
         add("Animasi", "settings put global window_animation_scale ${p.anim}")
         add("Animasi", "settings put global transition_animation_scale ${p.anim}")
@@ -45,8 +44,20 @@ object Tweaks {
         }
         add("Mode hemat daya", "settings put global low_power ${if (p.saver) 1 else 0}")
 
-        val (code, out) = Shell.run(sb.toString())
-        if (code == -1) return TweakResult(false, "Gagal menerapkan profil ${p.label}: $out")
+        val out: String
+        if (ready()) {
+            // Semua perintah digabung jadi satu panggilan supaya cepat.
+            val sb = StringBuilder()
+            cmds.forEach { (label, cmd) ->
+                sb.append("(").append(cmd).append(") >/dev/null 2>&1 || echo FAIL:").append(label).append("; ")
+            }
+            val (code, o) = Shell.run(sb.toString())
+            if (code == -1) return TweakResult(false, "Gagal menerapkan profil ${p.label}: $o")
+            out = o
+        } else {
+            // Mode mandiri: tulis pengaturan lewat API.
+            out = cmds.filter { (_, cmd) -> Sec.settings(cmd)?.first != 0 }.joinToString("\n") { "FAIL:" + it.first }
+        }
         val failed = out.lines()
             .filter { it.startsWith("FAIL:") }
             .map { it.removePrefix("FAIL:").trim() }
@@ -70,8 +81,16 @@ object Tweaks {
     fun optimize(pkg: String): TweakResult =
         run("cmd package compile -m speed -f $pkg", "Aplikasi selesai dioptimalkan", "Gagal mengoptimalkan")
 
-    fun forceStop(pkg: String): TweakResult =
-        run("am force-stop $pkg", "Aplikasi dihentikan", "Gagal menghentikan")
+    fun forceStop(pkg: String): TweakResult {
+        if (ready()) return run("am force-stop $pkg", "Aplikasi dihentikan", "Gagal menghentikan")
+        val c = Sec.ctx ?: return TweakResult(false, NO_SHIZUKU)
+        return try {
+            c.getSystemService(android.app.ActivityManager::class.java).killBackgroundProcesses(pkg)
+            TweakResult(true, "Proses latar dihentikan (tanpa Shizuku, hasil terbatas)")
+        } catch (e: Throwable) {
+            TweakResult(false, "Gagal menghentikan: ${e.message}")
+        }
+    }
 
     fun sleep(pkg: String): TweakResult = run(
         "am force-stop $pkg; cmd appops set $pkg RUN_IN_BACKGROUND ignore; " +
@@ -93,11 +112,26 @@ object Tweaks {
     fun dexoptAll(): TweakResult =
         run("cmd package bg-dexopt-job", "Optimasi aplikasi dijalankan di latar", "Gagal menjalankan optimasi")
 
-    fun lockScreen(): TweakResult =
-        run("input keyevent 223", "Layar dikunci", "Gagal mengunci layar")
+    fun lockScreen(): TweakResult {
+        if (ready()) return run("input keyevent 223", "Layar dikunci", "Gagal mengunci layar")
+        if (TweakAccess.lock()) return TweakResult(true, "Layar dikunci")
+        return TweakResult(false, "Nyalakan layanan Aksesibilitas Tweak Launcher (Setelan > Otomasi > Mode mandiri) atau jalankan Shizuku.")
+    }
 
-    fun expandNotif(): TweakResult =
-        run("cmd statusbar expand-notifications", "Panel dibuka", "Gagal membuka panel notifikasi")
+    fun expandNotif(): TweakResult {
+        if (ready()) return run("cmd statusbar expand-notifications", "Panel dibuka", "Gagal membuka panel notifikasi")
+        val c = Sec.ctx
+        if (c != null) {
+            try {
+                val sb = c.getSystemService("statusbar")
+                sb?.javaClass?.getMethod("expandNotificationsPanel")?.invoke(sb)
+                return TweakResult(true, "Panel dibuka")
+            } catch (e: Throwable) {
+            }
+        }
+        if (TweakAccess.notifications()) return TweakResult(true, "Panel dibuka")
+        return TweakResult(false, "Nyalakan layanan Aksesibilitas Tweak Launcher (Setelan > Otomasi > Mode mandiri) atau jalankan Shizuku.")
+    }
 
     fun readDisplay(): DisplayInfo {
         if (!ready()) return DisplayInfo()

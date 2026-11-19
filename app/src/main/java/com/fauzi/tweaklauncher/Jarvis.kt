@@ -185,8 +185,11 @@ object JarvisBrain {
         if (has(t, "wifi", "wi fi")) {
             val on = !has(t, "mati", "matikan", "nonaktif")
             if (Shell.state() != ShizukuState.READY) {
-                vm.runGesture("settings")
-                return "Shizuku belum aktif, jadi saya tidak bisa mengubah Wi-Fi langsung."
+                try {
+                    ctx.startActivity(Intent(android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (e: Exception) {
+                }
+                return "Tanpa Shizuku saya hanya bisa membuka panel Wi-Fi. Ketuk sendiri sakelarnya."
             }
             withContext(Dispatchers.IO) { Shell.run("svc wifi " + if (on) "enable" else "disable") }
             return if (on) "Wi-Fi dinyalakan." else "Wi-Fi dimatikan."

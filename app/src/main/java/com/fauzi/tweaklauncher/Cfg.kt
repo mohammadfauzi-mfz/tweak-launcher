@@ -55,6 +55,10 @@ class Setting<T : Any>(
 
 /** Seluruh pengaturan launcher. Dipakai bersama oleh UI dan layanan latar. */
 class Cfg(ctx: Context) {
+    init {
+        Sec.init(ctx)
+    }
+
     val sp: SharedPreferences = ctx.getSharedPreferences("tweak", Context.MODE_PRIVATE)
     private val all = mutableListOf<Setting<*>>()
 

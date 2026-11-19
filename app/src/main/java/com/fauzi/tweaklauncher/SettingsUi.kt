@@ -24,6 +24,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -415,6 +420,47 @@ private fun ProfilesPage(vm: MainVm) {
 private fun AutomationPage(vm: MainVm) {
     val cfg = vm.cfg
     val profiles = vm.profiles
+    val ctxM = LocalContext.current
+    val scopeM = rememberCoroutineScope()
+    var rev by remember { mutableIntStateOf(0) }
+    var secMsg by remember { mutableStateOf("") }
+    val secOn = rev >= 0 && Sec.canWriteSecure()
+    val sysOn = rev >= 0 && Sec.canWriteSystem()
+    val accOn = rev >= 0 && TweakAccess.inst != null
+    val usageOn = rev >= 0 && Sys.hasUsageAccess(ctxM)
+    FoldCard("set_secure", "Mode mandiri (tanpa Shizuku)", if (secOn) "Aktif" else "Belum aktif", defaultOpen = false) {
+        Text(if (secOn) "✓ Izin tulis pengaturan sistem: aktif" else "✗ Izin tulis pengaturan sistem: belum", color = if (secOn) Green else Pal.text, fontSize = 13.sp)
+        Text(if (sysOn) "✓ Ubah setelan sistem (refresh rate): aktif" else "✗ Ubah setelan sistem (refresh rate): belum", color = if (sysOn) Green else Pal.text, fontSize = 13.sp)
+        Text(if (accOn) "✓ Layanan Aksesibilitas: aktif" else "✗ Layanan Aksesibilitas: belum", color = if (accOn) Green else Pal.text, fontSize = 13.sp)
+        Text(if (usageOn) "✓ Akses penggunaan: aktif" else "✗ Akses penggunaan: belum", color = if (usageOn) Green else Pal.text, fontSize = 13.sp)
+        Hint("Mode mandiri membuat sebagian fitur tetap jalan setelah HP restart tanpa menyalakan Shizuku lagi: profil performa (animasi, refresh rate, hemat daya), profil otomatis, dan blok iklan DNS. Izinnya diberikan sekali dan bertahan setelah restart. Yang tetap butuh Shizuku: tidurkan aplikasi, bersihkan cache, optimasi, nyalakan/matikan data, hemat data sistem, resolusi/DPI.")
+        ActionButton("Aktifkan lewat Shizuku", Modifier.fillMaxWidth(), primary = true, enabled = !secOn) {
+            scopeM.launch {
+                secMsg = withContext(Dispatchers.IO) { Sec.grant() }
+                rev++
+            }
+        }
+        Text("Atau dari komputer (adb):", color = Pal.sub, fontSize = 12.sp)
+        Text("adb shell pm grant ${ctxM.packageName} android.permission.WRITE_SECURE_SETTINGS", color = Pal.text, fontSize = 12.sp)
+        ActionButton("Izin ubah setelan sistem", Modifier.fillMaxWidth(), enabled = !sysOn) {
+            try {
+                ctxM.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:${ctxM.packageName}"))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            } catch (e: Exception) {
+            }
+        }
+        ActionButton("Buka pengaturan Aksesibilitas", Modifier.fillMaxWidth(), enabled = !accOn) {
+            try {
+                ctxM.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+            }
+        }
+        Hint("Aksesibilitas hanya dipakai untuk mengunci layar dan membuka panel notifikasi tanpa Shizuku, tidak membaca isi layar. Cari \"Tweak Launcher\" di daftar layanan lalu nyalakan.")
+        ActionButton("Periksa ulang", Modifier.fillMaxWidth()) { rev++ }
+        if (secMsg.isNotEmpty()) Text(secMsg, color = Pal.sub, fontSize = 12.sp)
+    }
     FoldCard("set_autoapp", "Profil otomatis", if (cfg.autoApp) "Aktif" else "Mati", defaultOpen = false) {
         SwitchRow(
             "Profil otomatis per aplikasi",

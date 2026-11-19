@@ -138,6 +138,8 @@ fun ProfileCard(vm: MainVm) {
             Text("Status Shizuku", color = Pal.sub, fontSize = 12.sp)
             if (ready) {
                 Text("Shizuku aktif", color = Green, fontSize = 12.sp)
+            } else if (Sec.canWriteSecure()) {
+                Text("Mode mandiri aktif", color = Green, fontSize = 12.sp)
             } else {
                 // Ketuk untuk membuka Shizuku (atau meminta izin jika Shizuku sudah jalan).
                 Text(

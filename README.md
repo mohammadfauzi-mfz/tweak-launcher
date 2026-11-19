@@ -78,3 +78,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Overlay monitor: isi bisa dipilih. Suara pengisian daya (mulai, level 60/80/100 dst, pesan dan bahasa bisa diubah).
 - Opsi ikon garis neon (Modern): ikon asli diubah otomatis jadi garis neon berwarna dengan glow; tebal, cahaya, warna diatur di Setelan > Ikon.
 - Beranda Modern: widget pemutar musik minimalis (judul, spektrum berwarna tema, kontrol) di atas kolom aplikasi.
+- Mode mandiri: izin WRITE_SECURE_SETTINGS sekali (via Shizuku/adb) agar profil, profil otomatis, dan blok iklan DNS jalan tanpa Shizuku; hentikan via killBackgroundProcesses, kunci layar/panel notifikasi via Aksesibilitas, daftar berjalan via data penggunaan, sinyal via TelephonyManager.

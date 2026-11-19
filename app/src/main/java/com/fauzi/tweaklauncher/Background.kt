@@ -34,8 +34,30 @@ data class RunApp(val app: AppItem, val mb: Int)
 object Running {
     private val KEEP = listOf("moe.shizuku", "inputmethod", "keyboard", "com.fauzi.tweaklauncher")
 
+    /** Tanpa Shizuku: aplikasi yang dipakai dalam 1 jam terakhir (perkiraan). */
+    private fun loadUsage(vm: MainVm): Pair<List<RunApp>, String?> {
+        val ctx = Sec.ctx
+        if (ctx == null || !Sys.hasUsageAccess(ctx)) {
+            return Pair(emptyList(), "Tanpa Shizuku, daftar memakai data penggunaan. Beri izin Akses penggunaan dulu (Setelan > Otomasi > Profil otomatis).")
+        }
+        val usm = ctx.getSystemService(android.app.usage.UsageStatsManager::class.java)
+        val now = System.currentTimeMillis()
+        val since = now - 3_600_000L
+        val last = HashMap<String, Long>()
+        usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, since, now)?.forEach {
+            if (it.lastTimeUsed >= since) last[it.packageName] = maxOf(last[it.packageName] ?: 0L, it.lastTimeUsed)
+        }
+        val byPkg = vm.apps.associateBy { it.pkg }
+        val list = last.entries.sortedByDescending { it.value }.mapNotNull { (p, _) ->
+            val a = byPkg[p] ?: return@mapNotNull null
+            if (KEEP.any { p.contains(it) }) return@mapNotNull null
+            RunApp(a, -1)
+        }
+        return Pair(list, "Tanpa Shizuku: menampilkan aplikasi yang dipakai dalam 1 jam terakhir (perkiraan, bukan daftar proses sebenarnya).")
+    }
+
     fun load(vm: MainVm): Pair<List<RunApp>, String?> {
-        if (Shell.state() != ShizukuState.READY) return Pair(emptyList(), "Shizuku belum siap. Jalankan Shizuku dan beri izin dulu.")
+        if (Shell.state() != ShizukuState.READY) return loadUsage(vm)
         val (code, out) = Shell.run("ps -A -o RSS,NAME")
         if (code != 0 && out.isBlank()) return Pair(emptyList(), "Gagal membaca daftar proses.")
         val rss = HashMap<String, Long>()
@@ -80,16 +102,16 @@ fun RunningAppsCard(vm: MainVm) {
         Hint("Daftar aplikasi yang prosesnya masih hidup di latar, urut dari RAM terbesar. Hentikan untuk menutupnya, Tidurkan untuk melarangnya jalan di latar. Butuh Shizuku.")
         ActionButton(if (busy) "Memuat..." else "Muat ulang", Modifier.fillMaxWidth(), primary = true, enabled = !busy) { refresh() }
         if (msg.isNotEmpty()) Text(msg, color = Pal.sub, fontSize = 12.sp)
-        if (loaded && list.isEmpty() && msg.isEmpty()) Text("Tidak ada aplikasi yang berjalan di latar.", color = Pal.sub, fontSize = 13.sp)
-        if (list.isNotEmpty()) {
-            Text("Total sekitar ${list.sumOf { it.mb }} MB", color = Pal.soft, fontSize = 12.sp)
+        if (loaded && list.isEmpty()) Text("Tidak ada aplikasi yang berjalan di latar.", color = Pal.sub, fontSize = 13.sp)
+        if (list.any { it.mb >= 0 }) {
+            Text("Total sekitar ${list.sumOf { maxOf(it.mb, 0) }} MB", color = Pal.soft, fontSize = 12.sp)
         }
         list.forEach { r ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AppIcon(r.app, 34.dp, badge = false)
                 Column(Modifier.weight(1f)) {
                     Text(r.app.label, color = Pal.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("${r.mb} MB", color = Pal.sub, fontSize = 11.sp)
+                    Text(if (r.mb >= 0) "${r.mb} MB" else "dipakai baru-baru ini", color = Pal.sub, fontSize = 11.sp)
                 }
                 Text(
                     "Hentikan", color = Pal.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold,
@@ -169,6 +191,16 @@ private fun signalText(ctx: Context): String {
             parts.add("Seluler $rssi dBm")
         }
     }
+    if (parts.none { it.startsWith("Seluler") }) {
+        try {
+            val tm = ctx.getSystemService(android.telephony.TelephonyManager::class.java)
+            val cs = tm.signalStrength?.cellSignalStrengths?.firstOrNull()
+            if (cs != null && cs.dbm in -140..-40) parts.add("Seluler ${cs.dbm} dBm (tingkat ${cs.level} dari 4)")
+        } catch (e: SecurityException) {
+            parts.add("Izin telepon dibutuhkan untuk membaca sinyal seluler.")
+        } catch (e: Exception) {
+        }
+    }
     return if (parts.isEmpty()) "Kekuatan sinyal tidak terbaca." else parts.joinToString(" · ")
 }
 
@@ -218,7 +250,13 @@ fun NetworkCard(vm: MainVm) {
             msg = "Menyambung ulang..."
             scope.launch {
                 msg = withContext(Dispatchers.IO) {
-                    if (Shell.state() != ShizukuState.READY) return@withContext "Shizuku belum siap. Jalankan Shizuku dan beri izin dulu."
+                    if (Shell.state() != ShizukuState.READY) {
+                        try {
+                            ctx.startActivity(android.content.Intent(android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                        } catch (e: Exception) {
+                        }
+                        return@withContext "Tanpa Shizuku: panel koneksi dibuka. Matikan lalu nyalakan Wi-Fi atau data sendiri."
+                    }
                     val wifiOn = try {
                         (ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).isWifiEnabled
                     } catch (e: Exception) {

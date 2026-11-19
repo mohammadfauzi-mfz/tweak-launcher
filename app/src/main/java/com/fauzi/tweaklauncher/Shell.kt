@@ -28,6 +28,13 @@ object Shell {
         }
     }
 
+    /** Bisa menulis pengaturan sistem: lewat Shizuku, atau lewat izin mode mandiri. */
+    fun canSettings(): Boolean = state() == ShizukuState.READY || Sec.canWriteSecure()
+
+    /** Menjalankan perintah; untuk "settings ..." memakai API langsung bila Shizuku tidak siap. */
+    fun exec(cmd: String): Pair<Int, String> =
+        if (state() == ShizukuState.READY) run(cmd) else (Sec.settings(cmd) ?: (-1 to "Shizuku belum siap"))
+
     /** Mengembalikan (kode keluar, keluaran). Kode -1 berarti gagal dijalankan. */
     fun run(cmd: String): Pair<Int, String> = try {
         // newProcess bersifat private di Shizuku 13.x, tapi masih bisa dipanggil lewat refleksi.
