@@ -56,6 +56,7 @@ fun MusicWidget(vm: MainVm) {
         }
     }
     val acc = Pal.accent
+    val lineC = Pal.line
 
     SCard(Modifier.fillMaxWidth()) {
         if (perm) {
@@ -94,7 +95,7 @@ fun MusicWidget(vm: MainVm) {
         // Garis kemajuan.
         val frac = if (np.dur > 0) (np.pos.toFloat() / np.dur).coerceIn(0f, 1f) else 0f
         Canvas(Modifier.fillMaxWidth().height(3.dp)) {
-            drawRoundRect(Pal.line, size = size, cornerRadius = CornerRadius(size.height))
+            drawRoundRect(lineC, size = size, cornerRadius = CornerRadius(size.height))
             drawRoundRect(acc, size = Size(size.width * frac, size.height), cornerRadius = CornerRadius(size.height))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
