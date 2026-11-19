@@ -106,6 +106,7 @@ class Cfg(ctx: Context) {
     var lockOn by s("lockOn", false)
     var gameApps by s("gameApps", "")
     var hud by s("hud", false)
+    var musicWidget by s("musicWidget", true)
     var hudName by s("hudName", "")
     var jvOn by s("jvOn", true)
     var jvSpeak by s("jvSpeak", true)

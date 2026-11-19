@@ -85,7 +85,10 @@ fun HomeScreen(vm: MainVm) {
                     "clock" -> if (vm.hudOn) HudHeader(vm, now) else ClockBlock(vm, now)
                     "profile" -> ProfileCard(vm)
                     "stats" -> if (vm.hudOn) HudStats(vm) else StatsCard(vm)
-                    "apps" -> AppsGrid(vm)
+                    "apps" -> {
+                        if (cfg.musicWidget && cfg.uiMode == "modern") MusicWidget(vm)
+                        AppsGrid(vm)
+                    }
                     "widgets" -> WidgetsBlock(vm)
                 }
             }

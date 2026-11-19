@@ -228,6 +228,7 @@ private fun AppearancePage(vm: MainVm) {
 private fun HomePage(vm: MainVm) {
     val cfg = vm.cfg
     val secs = Layout.parse(cfg.homeSections)
+    SwitchRow("Pemutar musik di Beranda", "Widget minimalis dengan spektrum di atas kolom aplikasi (mode Modern). Tampil saat ada musik dari aplikasi pemutar. Butuh akses notifikasi.", cfg.musicWidget) { cfg.musicWidget = it }
     FoldCard("set_secs", "Bagian Beranda (urutan dan tampil)", defaultOpen = false) {
         secs.forEachIndexed { i, (k, on) ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
