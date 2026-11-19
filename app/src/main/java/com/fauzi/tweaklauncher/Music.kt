@@ -1,7 +1,11 @@
 package com.fauzi.tweaklauncher
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,63 +60,84 @@ fun MusicWidget(vm: MainVm) {
         }
     }
     val acc = Pal.accent
-    val lineC = Pal.line
 
-    SCard(Modifier.fillMaxWidth()) {
-        if (perm) {
-            Text("Pemutar musik", color = Pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text("Beri akses notifikasi supaya musik yang sedang diputar bisa tampil di sini.", color = Pal.sub, fontSize = 12.sp)
-            ActionButton("Beri akses", Modifier.fillMaxWidth()) { vm.openNotifAccess() }
-            return@SCard
+    val box = Modifier
+        .fillMaxWidth()
+        .clip(Pal.shape)
+        .background(Pal.card)
+        .border(1.dp, Pal.line, Pal.shape)
+        .padding(horizontal = 12.dp, vertical = 8.dp)
+    if (perm) {
+        Row(box, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Beri akses notifikasi untuk menampilkan pemutar musik.", color = Pal.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            ActionButton("Beri akses", Modifier.height(38.dp)) { vm.openNotifAccess() }
         }
-        Column(
-            Modifier.fillMaxWidth().clickable { if (np.pkg.isNotEmpty()) vm.launchApp(np.pkg) },
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(np.title.ifEmpty { "(tanpa judul)" }, color = Pal.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (np.artist.isNotEmpty()) Text(np.artist, color = Pal.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        // Spektrum: animasi, mengikuti status putar dan warna aksen tema.
-        Canvas(Modifier.fillMaxWidth().height(44.dp)) {
-            val n = 28
-            val gap = size.width * 0.012f
-            val bw = (size.width - gap * (n - 1)) / n
-            for (i in 0 until n) {
-                val t = i / (n - 1f)
-                val wave = 0.5f + 0.5f * sin(phase * 1.3f + i * 0.55f)
-                val wave2 = 0.5f + 0.5f * sin(phase * 0.8f + i * 1.7f + 1.2f)
-                val env = 0.35f + 0.65f * (1f - 0.6f * t)
-                val h = (0.08f + level * env * (0.25f + 0.75f * (wave * 0.6f + wave2 * 0.4f))).coerceIn(0.06f, 1f)
-                val bh = size.height * h
-                drawRoundRect(
-                    color = acc.copy(alpha = 0.45f + 0.55f * h),
-                    topLeft = Offset(i * (bw + gap), size.height - bh),
-                    size = Size(bw, bh),
-                    cornerRadius = CornerRadius(bw / 2, bw / 2)
-                )
+        return
+    }
+    val frac = if (np.dur > 0) (np.pos.toFloat() / np.dur).coerceIn(0f, 1f) else 0f
+    val bg = Pal.bg
+    Row(box, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f)) {
+            // Spektrum: batang yang sudah lewat berwarna penuh, sisanya redup. Animasi, mengikuti warna aksen tema.
+            Canvas(Modifier.fillMaxWidth().height(26.dp)) {
+                val n = 36
+                val gap = size.width * 0.008f
+                val bw = (size.width - gap * (n - 1)) / n
+                for (i in 0 until n) {
+                    val t = i / (n - 1f)
+                    val wave = 0.5f + 0.5f * sin(phase * 1.3f + i * 0.55f)
+                    val wave2 = 0.5f + 0.5f * sin(phase * 0.8f + i * 1.7f + 1.2f)
+                    val env = 0.4f + 0.6f * (1f - 0.5f * t)
+                    val h = (0.1f + level * env * (0.25f + 0.75f * (wave * 0.6f + wave2 * 0.4f))).coerceIn(0.08f, 1f)
+                    val bh = size.height * h
+                    drawRoundRect(
+                        color = if (t <= frac) acc else acc.copy(alpha = 0.3f),
+                        topLeft = Offset(i * (bw + gap), (size.height - bh) / 2),
+                        size = Size(bw, bh),
+                        cornerRadius = CornerRadius(bw / 2, bw / 2)
+                    )
+                }
+            }
+            Row(Modifier.fillMaxWidth().clickable { if (np.pkg.isNotEmpty()) vm.launchApp(np.pkg) }, verticalAlignment = Alignment.CenterVertically) {
+                val label = np.title.ifEmpty { "(tanpa judul)" } + if (np.artist.isNotEmpty()) " - ${np.artist}" else ""
+                Text(label, color = Pal.text, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (np.dur > 0) Text(" ${fmt(np.pos)} / ${fmt(np.dur)}", color = Pal.sub, fontSize = 10.sp, maxLines = 1)
             }
         }
-        // Garis kemajuan.
-        val frac = if (np.dur > 0) (np.pos.toFloat() / np.dur).coerceIn(0f, 1f) else 0f
-        Canvas(Modifier.fillMaxWidth().height(3.dp)) {
-            drawRoundRect(lineC, size = size, cornerRadius = CornerRadius(size.height))
-            drawRoundRect(acc, size = Size(size.width * frac, size.height), cornerRadius = CornerRadius(size.height))
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            MusicBtn(0, acc) { WaHub.ctrl?.transportControls?.skipToPrevious() }
-            MusicBtn(if (np.playing) 2 else 1, acc, big = true) {
-                if (np.playing) WaHub.ctrl?.transportControls?.pause() else WaHub.ctrl?.transportControls?.play()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MusicBtn(0, Pal.text) { WaHub.ctrl?.transportControls?.skipToPrevious() }
+            Box(
+                Modifier.size(38.dp).clip(CircleShape).background(acc).clickable {
+                    if (np.playing) WaHub.ctrl?.transportControls?.pause() else WaHub.ctrl?.transportControls?.play()
+                },
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(Modifier.size(14.dp)) {
+                    val w = size.width
+                    val h = size.height
+                    if (np.playing) {
+                        drawRect(bg, Offset(w * 0.1f, 0f), Size(w * 0.3f, h))
+                        drawRect(bg, Offset(w * 0.6f, 0f), Size(w * 0.3f, h))
+                    } else {
+                        drawPath(Path().apply { moveTo(w * 0.2f, 0f); lineTo(w, h / 2); lineTo(w * 0.2f, h); close() }, bg)
+                    }
+                }
             }
-            MusicBtn(3, acc) { WaHub.ctrl?.transportControls?.skipToNext() }
+            MusicBtn(3, Pal.text) { WaHub.ctrl?.transportControls?.skipToNext() }
         }
     }
+}
+
+private fun fmt(ms: Long): String {
+    val s = (ms / 1000).coerceAtLeast(0)
+    return "${s / 60}:${(s % 60).toString().padStart(2, '0')}"
 }
 
 /** kind: 0 sebelumnya, 1 putar, 2 jeda, 3 berikutnya. */
 @Composable
 private fun MusicBtn(kind: Int, color: Color, big: Boolean = false, onClick: () -> Unit) {
-    Box(Modifier.size(if (big) 52.dp else 44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(if (big) 26.dp else 20.dp)) {
+    Box(Modifier.size(if (big) 52.dp else 34.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(if (big) 26.dp else 12.dp)) {
             val w = size.width
             val h = size.height
             when (kind) {
