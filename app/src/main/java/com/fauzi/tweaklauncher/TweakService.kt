@@ -159,6 +159,7 @@ class TweakService : Service() {
                         autoProfile()
                     } catch (e: Exception) {
                     }
+                    WifiTools.syncLock(this@TweakService, cfg.wifiLow)
                     withContext(Dispatchers.Main) { syncOverlay() }
                     delay(2000)
                 }
@@ -168,6 +169,7 @@ class TweakService : Service() {
     }
 
     override fun onDestroy() {
+        WifiTools.release()
         if (chgRegistered) {
             try {
                 unregisterReceiver(chgReceiver)

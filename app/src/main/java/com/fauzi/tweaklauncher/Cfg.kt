@@ -178,6 +178,7 @@ class Cfg(ctx: Context) {
     var overlayPos by s("overlayPos", "topright")
     var overlayAlpha by s("overlayAlpha", 80)
     var overlayNet by s("overlayNet", true)
+    var wifiLow by s("wifiLow", false)
     var overlayItems by s("overlayItems", "hz,ram,temp,bat,net")
     var chgOn by s("chgOn", false)
     var chgStart by s("chgStart", true)
@@ -214,7 +215,7 @@ class Cfg(ctx: Context) {
     var profilesJson by s("profilesJ", "")
 
     /** Apakah layanan latar perlu berjalan. */
-    fun bgNeeded(): Boolean = overlayOn || autoApp || autoSched || chgOn
+    fun bgNeeded(): Boolean = overlayOn || autoApp || autoSched || chgOn || wifiLow
 
     /** Dipanggil VM untuk menyamakan profil yang sedang aktif jika diubah oleh layanan latar. */
     fun syncApplied() {

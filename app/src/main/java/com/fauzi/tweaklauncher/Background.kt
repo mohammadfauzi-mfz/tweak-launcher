@@ -141,7 +141,7 @@ fun RunningAppsCard(vm: MainVm) {
 
 // ---------------------------------------------------------------- Jaringan
 
-private fun tcpPing(host: String, port: Int = 443, tries: Int = 4): Pair<Int, Int> {
+internal fun tcpPing(host: String, port: Int = 443, tries: Int = 4): Pair<Int, Int> {
     var ok = 0
     var sum = 0L
     repeat(tries) {

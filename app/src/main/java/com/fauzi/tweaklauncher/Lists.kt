@@ -151,6 +151,8 @@ fun CareScreen(vm: MainVm) {
 
         NetworkCard(vm)
 
+        WifiCard(vm)
+
         FirewallCard(vm)
 
         AdsBlockCard(vm)
