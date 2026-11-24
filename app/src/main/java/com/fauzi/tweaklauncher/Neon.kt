@@ -22,16 +22,18 @@ object Neon {
 
     @Composable
     fun rememberNeon(app: AppItem, cfg: Cfg): ImageBitmap? {
+        val wp = cfg.uiMode == "wp"
         val accent = if (cfg.neonColor == "accent") cfg.accent else ""
-        val key = "${app.pkg}|${cfg.neonThick}|${cfg.neonGlow}|${cfg.neonColor}|$accent"
+        val key = if (wp) "wp|${app.pkg}|${cfg.neonThick}|${cfg.wpLine}" else "${app.pkg}|${cfg.neonThick}|${cfg.neonGlow}|${cfg.neonColor}|$accent"
         val st = produceState<ImageBitmap?>(cache[key], key) {
             if (value == null) {
                 value = withContext(Dispatchers.Default) {
                     try {
                         val src = app.icon.asAndroidBitmap()
                         val fixed = if (src.config == Bitmap.Config.ARGB_8888 && !src.isMutable) src else src.copy(Bitmap.Config.ARGB_8888, false)
-                        val acc = if (cfg.neonColor == "accent") runCatching { AColor.parseColor(cfg.accent) }.getOrNull() else null
-                        make(fixed, cfg.neonThick, cfg.neonGlow, acc).asImageBitmap().also { cache[key] = it }
+                        val acc = if (wp) (if (cfg.wpLine == "black") AColor.BLACK else AColor.WHITE)
+                        else if (cfg.neonColor == "accent") runCatching { AColor.parseColor(cfg.accent) }.getOrNull() else null
+                        make(fixed, cfg.neonThick, if (wp) 0 else cfg.neonGlow, acc).asImageBitmap().also { cache[key] = it }
                     } catch (e: Throwable) {
                         null
                     }

@@ -402,7 +402,10 @@ private fun WpAppIcon(vm: MainVm, app: AppItem, size: Dp, dim: Boolean) {
     val mono = remember(app.pkg, size, custom) {
         if (custom == null) WpIcons.mono(ctx, app.pkg, (size.value * density).toInt().coerceAtLeast(16)) else null
     }
-    if (mono != null) {
+    val line = if (custom == null && vm.cfg.wpLine != "off") Neon.rememberNeon(app, vm.cfg) else null
+    if (line != null) {
+        Image(line, null, Modifier.size(size).alpha(if (dim) 0.45f else 1f))
+    } else if (mono != null) {
         Image(mono, null, Modifier.size(size).alpha(if (dim) 0.45f else 1f))
     } else {
         AppIcon(app, size, badge = false, dim = dim)
@@ -660,6 +663,11 @@ fun WpAccentCard(vm: MainVm) {
     if (cfg.uiMode != "wp") return
     FoldCard("set_wptheme", "Tema Windows Phone", defaultOpen = false) {
         ChoiceRow("Latar", listOf("dark" to "Gelap", "light" to "Terang"), if (cfg.wpLight) "light" else "dark") { cfg.wpLight = it == "light" }
+        ChoiceRow("Ikon aplikasi", listOf("off" to "Asli", "white" to "Garis putih", "black" to "Garis hitam"), cfg.wpLine) { cfg.wpLine = it }
+        if (cfg.wpLine != "off") {
+            Text("Ikon asli diubah otomatis jadi garis polos. Garis hitam hanya terlihat di ubin berwarna terang atau tema terang. Ikon dari paket tidak diubah.", color = Pal.sub, fontSize = 12.sp)
+            IntSlider("Tebal garis", "", cfg.neonThick, 1, 3) { cfg.neonThick = it }
+        }
         Text("Warna aksen", color = Pal.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         Text("Dipakai untuk ubin, huruf grup, dan tombol di mode Windows Phone.", color = Pal.sub, fontSize = 12.sp)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -80,3 +80,4 @@ Launcher Android untuk tweak performa **tanpa root**, memakai Shizuku. Tampilann
 - Beranda Modern: widget pemutar musik minimalis (judul, spektrum berwarna tema, kontrol) di atas kolom aplikasi.
 - Mode mandiri: izin WRITE_SECURE_SETTINGS sekali (via Shizuku/adb) agar profil, profil otomatis, dan blok iklan DNS jalan tanpa Shizuku; hentikan via killBackgroundProcesses, kunci layar/panel notifikasi via Aksesibilitas, daftar berjalan via data penggunaan, sinyal via TelephonyManager.
 - Perawatan: kartu Wi-Fi (info band/kanal/sinyal + saran, uji kecepatan unduh/unggah/ping, mode latensi rendah).
+- Windows Phone: opsi ikon aplikasi garis putih/hitam (otomatis dari ikon asli), diatur di Tema Windows Phone.
