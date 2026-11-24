@@ -109,7 +109,7 @@ fun SettingsScreen(vm: MainVm) {
 }
 
 @Composable
-private fun IntSlider(title: String, unit: String, value: Int, min: Int, max: Int, onChange: (Int) -> Unit) {
+internal fun IntSlider(title: String, unit: String, value: Int, min: Int, max: Int, onChange: (Int) -> Unit) {
     SliderRow(
         title, "$value$unit", value.toFloat(), min.toFloat()..max.toFloat(),
         (max - min - 1).coerceAtLeast(0)
