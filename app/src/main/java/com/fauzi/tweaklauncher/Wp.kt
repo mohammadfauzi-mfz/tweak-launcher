@@ -338,10 +338,14 @@ private fun WpTileView(vm: MainVm, t: WpTile, sz: String, w: Dp, h: Dp, all: Lis
                         t.app != null -> WpAppIcon(vm, t.app, ic, t.app.pkg in sleeping)
                         t.folder != null -> {
                             val mini = ic / 2.2f
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            val fctx = LocalContext.current
+                            val fbmp = vm.cfg.sysIcon("fld:${t.label}")?.let { IconPack.get(fctx, it) }
+                            if (fbmp != null) {
+                                Image(fbmp, null, Modifier.size(ic), filterQuality = androidx.compose.ui.graphics.FilterQuality.None)
+                            } else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 t.folder.take(4).chunked(2).forEach { row ->
                                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        row.forEach { a -> AppIcon(a, mini, badge = false) }
+                                        row.forEach { a -> WpAppIcon(vm, a, mini, false) }
                                     }
                                 }
                             }

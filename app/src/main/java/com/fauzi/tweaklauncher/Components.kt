@@ -388,7 +388,7 @@ fun AppIcon(app: AppItem, size: Dp, modifier: Modifier = Modifier, dim: Boolean 
                     .alpha(if (dim) 0.45f else 1f)
             )
         } else {
-            val neonBmp = if (cfg.iconNeon && cfg.uiMode == "modern") Neon.rememberNeon(app, cfg) else null
+            val neonBmp = if ((cfg.iconNeon && cfg.uiMode == "modern") || (cfg.uiMode == "wp" && cfg.wpLine != "off")) Neon.rememberNeon(app, cfg) else null
             if (neonBmp != null) Image(
                 bitmap = neonBmp,
                 contentDescription = app.label,
